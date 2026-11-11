@@ -9,6 +9,7 @@ import Home from './screens/Home';
 import AdminDashboard from './screens/Admin';
 import Documents from './screens/Documents';
 import Schedule from './screens/Schedule';
+import ClinicFlow, { AppointmentDetailsPage } from './screens/Clinic';
 import { MyRequests, MyAppointments, Notifications, Profile } from './screens/Lists';
 
 const RESIDENT_MENU = [
@@ -37,17 +38,20 @@ function Main() {
     : RESIDENT_TABS;
   const [tab, setTab] = useState(isAdmin ? 'dashboard' : 'home');
   const [svc, setSvc] = useState(null);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
   useEffect(() => { if (isAdmin) setTab('dashboard'); }, [isAdmin]);
-  const go = (nextTab) => { setSvc(null); setTab(nextTab); };
+  const go = (nextTab) => { setSvc(null); setSelectedAppointment(null); setTab(nextTab); };
   const back = wide ? null : () => go('profile');
 
   let body;
   if (svc === 'documents') body = <Documents onBack={() => setSvc(null)} />;
+  else if (svc === 'clinic') body = <ClinicFlow key={svc} onBack={() => setSvc(null)} />;
   else if (svc) body = <Schedule key={svc} kind={svc} onBack={() => setSvc(null)} />;
   else if (tab === 'dashboard' && isAdmin) body = <AdminDashboard />;
   else if (tab === 'home') body = <Home wide={wide} onOpen={setSvc} />;
   else if (tab === 'requests') body = <MyRequests onBack={back} />;
-  else if (tab === 'appointments') body = <MyAppointments onBack={back} />;
+  else if (tab === 'appointments' && selectedAppointment) body = <AppointmentDetailsPage appointment={selectedAppointment} onBack={() => setSelectedAppointment(null)} />;
+  else if (tab === 'appointments') body = <MyAppointments onBack={back} onSelect={setSelectedAppointment} />;
   else if (tab === 'notifications') body = <Notifications />;
   else body = <Profile go={go} />;
 

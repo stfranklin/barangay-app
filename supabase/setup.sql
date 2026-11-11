@@ -23,12 +23,16 @@ create table bookings (
   id bigint generated always as identity primary key,
   user_id uuid not null references profiles(id) on delete cascade,
   kind text not null check (kind in ('court','clinic')),
-  date date not null, time text not null, nurse text,
+  date date not null, time text not null, nurse text, service text,
   start_time time, end_time time, hours int, fee int,
+  status text not null default 'Pending',
   created_at timestamptz default now(),
-  unique (kind, date, time),
   constraint court_booking_fee_check check (kind <> 'court' or (start_time is not null and end_time > start_time and hours > 0 and hours = extract(epoch from (end_time - start_time)) / 3600 and fee = hours * 100)),
-  constraint court_bookings_no_overlap exclude using gist (kind with =, date with =, (tsrange(date + start_time, date + end_time)) with &&) where (kind = 'court')
+  constraint court_bookings_no_overlap exclude using gist (kind with =, date with =, (tsrange(date + start_time, date + end_time)) with &&) where (kind = 'court'),
+  constraint clinic_booking_time_check check (kind <> 'clinic' or (service is not null and nurse is not null and start_time >= time '08:00' and end_time <= time '16:00' and end_time - start_time = interval '1 hour' and extract(isodow from date) between 1 and 5)),
+  constraint clinic_nurse_no_overlap exclude using gist (kind with =, date with =, nurse with =, (tsrange(date + start_time, date + end_time)) with &&) where (kind = 'clinic'),
+  constraint clinic_resident_no_overlap exclude using gist (kind with =, user_id with =, date with =, (tsrange(date + start_time, date + end_time)) with &&) where (kind = 'clinic'),
+  constraint booking_status_check check (status in ('Pending','Confirmed','Declined','Completed'))
 );
 
 -- Resident accounts created by the Edge Function carry this server-set app metadata flag.
@@ -58,6 +62,7 @@ $$;
 alter table profiles enable row level security;
 alter table requests enable row level security;
 alter table bookings enable row level security;
+grant select, insert, update, delete on public.bookings to authenticated;
 
 -- Residents can only edit these columns of their own profile (not role).
 revoke update on profiles from authenticated;
@@ -73,6 +78,7 @@ create policy "admin update" on requests for update using (is_admin());
 -- Everyone signed in can see which slots are taken.
 create policy "read all" on bookings for select using (auth.uid() is not null);
 create policy "insert own" on bookings for insert with check (user_id = auth.uid());
+create policy "admin update bookings" on bookings for update using (is_admin()) with check (is_admin());
 create policy "delete own or admin" on bookings for delete using (user_id = auth.uid() or is_admin());
 
 -- Create the first administrator in Supabase Auth, then assign the role:

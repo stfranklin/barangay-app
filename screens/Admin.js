@@ -9,9 +9,13 @@ const EMPTY_FORM = { full_name: '', email: '', address: '', contact: '', passwor
 export default function AdminDashboard() {
   const { profile, createResident } = useAuth();
   const [residents, setResidents] = useState([]);
+  const [clinicAppointments, setClinicAppointments] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [appointmentsError, setAppointmentsError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const set = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
@@ -28,7 +32,42 @@ export default function AdminDashboard() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadResidents(); }, [loadResidents]);
+  const loadClinicAppointments = useCallback(async () => {
+    setAppointmentsLoading(true);
+    const { data, error: queryError } = await supabase
+      .from('bookings')
+      .select('id,user_id,date,time,nurse,service,status')
+      .eq('kind', 'clinic')
+      .order('date', { ascending: true });
+    if (queryError) {
+      setAppointmentsError(queryError.message);
+      setClinicAppointments([]);
+      setAppointmentsLoading(false);
+      return;
+    }
+    const userIds = [...new Set((data || []).map((booking) => booking.user_id))];
+    const { data: profiles } = userIds.length
+      ? await supabase.from('profiles').select('id,full_name').in('id', userIds)
+      : { data: [] };
+    const names = new Map((profiles || []).map((resident) => [resident.id, resident.full_name]));
+    setClinicAppointments((data || []).map((booking) => ({ ...booking, residentName: names.get(booking.user_id) || 'Resident' })));
+    setAppointmentsError('');
+    setAppointmentsLoading(false);
+  }, []);
+
+  useEffect(() => { loadResidents(); loadClinicAppointments(); }, [loadResidents, loadClinicAppointments]);
+
+  const updateAppointmentStatus = async (appointment, status) => {
+    setStatusBusy(appointment.id);
+    setAppointmentsError('');
+    const { error: updateError } = await supabase.from('bookings')
+      .update({ status })
+      .eq('id', appointment.id)
+      .eq('kind', 'clinic');
+    if (updateError) setAppointmentsError(updateError.message);
+    else await loadClinicAppointments();
+    setStatusBusy(null);
+  };
 
   const submit = async () => {
     setBusy(true);
@@ -84,6 +123,30 @@ export default function AdminDashboard() {
           {resident.email ? <Text className='mt-1 text-sm text-muted'>{resident.email}</Text> : null}
           <Text className='mt-1 text-sm text-muted'>{resident.address || 'No address on file'}</Text>
           {resident.contact ? <Text className='text-sm text-muted'>{resident.contact}</Text> : null}
+        </View>
+      ))}
+
+      <View className='mb-2 mt-8 flex-row items-center justify-between'>
+        <Text className='text-lg font-bold text-white'>Clinic appointment requests</Text>
+        <Pressable onPress={loadClinicAppointments} accessibilityRole='button'>
+          <Text className='text-sm font-semibold text-crimson'>Refresh</Text>
+        </Pressable>
+      </View>
+      {appointmentsLoading ? <Text className='py-3 text-muted'>Loading clinic appointments...</Text> : null}
+      {appointmentsError ? <Text className='py-3 text-crimson'>{appointmentsError}</Text> : null}
+      {!appointmentsLoading && !appointmentsError && clinicAppointments.length === 0 ? <Text className='py-3 text-muted'>No clinic appointment requests.</Text> : null}
+      {clinicAppointments.map((appointment) => (
+        <View key={appointment.id} className='mb-3 rounded-2xl border border-line bg-card p-4'>
+          <Text className='font-semibold text-white'>{appointment.service}</Text>
+          <Text className='mt-1 text-sm text-muted'>{appointment.residentName}</Text>
+          <Text className='text-sm text-muted'>{appointment.date} | {appointment.time}</Text>
+          <Text className='text-sm text-muted'>{appointment.nurse}</Text>
+          <Text className={`mt-2 font-semibold ${appointment.status === 'Confirmed' || appointment.status === 'Completed' ? 'text-green-500' : appointment.status === 'Declined' ? 'text-crimson' : 'text-royal'}`}>{appointment.status || 'Pending'}</Text>
+          {appointment.status === 'Pending' && <View className='flex-row gap-2'>
+            <View className='flex-1'><Btn label={statusBusy === appointment.id ? 'Updating...' : 'Confirm'} disabled={statusBusy !== null} onPress={() => updateAppointmentStatus(appointment, 'Confirmed')} /></View>
+            <View className='flex-1'><Btn outline label='Decline' disabled={statusBusy !== null} onPress={() => updateAppointmentStatus(appointment, 'Declined')} /></View>
+          </View>}
+          {appointment.status === 'Confirmed' && <Btn outline label={statusBusy === appointment.id ? 'Updating...' : 'Mark completed'} disabled={statusBusy !== null} onPress={() => updateAppointmentStatus(appointment, 'Completed')} />}
         </View>
       ))}
     </Page>

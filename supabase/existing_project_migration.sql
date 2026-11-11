@@ -6,6 +6,11 @@ alter table public.bookings add column if not exists start_time time;
 alter table public.bookings add column if not exists end_time time;
 alter table public.bookings add column if not exists hours int;
 alter table public.bookings add column if not exists fee int;
+alter table public.bookings add column if not exists service text;
+alter table public.bookings add column if not exists status text not null default 'Pending';
+
+-- Replace the old global same-time constraint with nurse/resident interval checks.
+alter table public.bookings drop constraint if exists bookings_kind_date_time_key;
 
 do $$ begin
   if not exists (
@@ -32,6 +37,57 @@ do $$ begin
         date with =,
         (tsrange(date + start_time, date + end_time)) with &&
       ) where (kind = 'court');
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'clinic_booking_time_check'
+      and conrelid = 'public.bookings'::regclass
+  ) then
+    alter table public.bookings add constraint clinic_booking_time_check
+      check (kind <> 'clinic' or (
+        service is not null and nurse is not null
+        and start_time >= time '08:00' and end_time <= time '16:00'
+        and end_time - start_time = interval '1 hour'
+        and extract(isodow from date) between 1 and 5
+      )) not valid;
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'clinic_nurse_no_overlap'
+      and conrelid = 'public.bookings'::regclass
+  ) then
+    alter table public.bookings add constraint clinic_nurse_no_overlap
+      exclude using gist (
+        kind with =,
+        date with =,
+        nurse with =,
+        (tsrange(date + start_time, date + end_time)) with &&
+      ) where (kind = 'clinic');
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'clinic_resident_no_overlap'
+      and conrelid = 'public.bookings'::regclass
+  ) then
+    alter table public.bookings add constraint clinic_resident_no_overlap
+      exclude using gist (
+        kind with =,
+        user_id with =,
+        date with =,
+        (tsrange(date + start_time, date + end_time)) with &&
+      ) where (kind = 'clinic');
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'booking_status_check'
+      and conrelid = 'public.bookings'::regclass
+  ) then
+    alter table public.bookings add constraint booking_status_check
+      check (status in ('Pending','Confirmed','Declined','Completed')) not valid;
   end if;
 end $$;
 
@@ -63,3 +119,8 @@ end $$;
 drop trigger if exists on_auth_user_require_admin on auth.users;
 create trigger on_auth_user_require_admin before insert on auth.users
   for each row execute function require_admin_created_user();
+
+drop policy if exists "admin update bookings" on public.bookings;
+create policy "admin update bookings" on public.bookings for update
+  using (is_admin()) with check (is_admin());
+grant select, insert, update, delete on public.bookings to authenticated;
