@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { Btn, Page } from '../components/ui';
+import { Btn, Field, Page } from '../components/ui';
+import { useAuth } from '../components/auth';
 import { useApp, STATUSES } from '../components/store';
 
 const Empty = ({ text }) => <Text className='mt-8 text-center text-muted'>{text}</Text>;
@@ -62,21 +64,51 @@ export function Notifications() {
 }
 
 export function Profile({ go }) {
+  const { profile, session, updateProfile, signOut } = useAuth();
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState({});
+  const [err, setErr] = useState('');
+  const set = (k) => (v) => setF({ ...f, [k]: v });
+  const start = () => {
+    setF({ full_name: profile?.full_name || '', address: profile?.address || '', contact: profile?.contact || '' });
+    setErr('');
+    setEdit(true);
+  };
+  const save = async () => {
+    const e = await updateProfile(f);
+    if (e) setErr(e); else setEdit(false);
+  };
+
   return (
     <Page title='Profile'>
-      <View className='mb-4 flex-row items-center rounded-2xl bg-card p-4'>
-        <Text className='mr-4 text-4xl'>👤</Text>
-        <View>
-          <Text className='text-lg font-bold text-white'>Juan Dela Cruz</Text>
-          <Text className='text-muted'>Resident</Text>
-        </View>
-      </View>
-      {[['requests', 'My Requests'], ['appointments', 'My Appointments']].map(([id, label]) => (
-        <Pressable key={id} onPress={() => go(id)} className='mb-2 flex-row justify-between rounded-xl bg-card p-4'>
-          <Text className='text-white'>{label}</Text>
-          <Text className='text-muted'>›</Text>
-        </Pressable>
-      ))}
+      {edit ? (
+        <>
+          <Field label='Full name' value={f.full_name} onChangeText={set('full_name')} />
+          <Field label='Address' value={f.address} onChangeText={set('address')} />
+          <Field label='Contact number' value={f.contact} onChangeText={set('contact')} keyboardType='phone-pad' />
+          {err ? <Text className='text-crimson'>{err}</Text> : null}
+          <Btn label='Save changes' onPress={save} />
+          <Btn outline label='Cancel' onPress={() => setEdit(false)} />
+        </>
+      ) : (
+        <>
+          <View className='mb-4 rounded-2xl bg-card p-4'>
+            <Text className='text-lg font-bold text-white'>{profile?.full_name || 'Resident'}</Text>
+            <Text className='text-muted'>{profile?.role === 'admin' ? 'Admin' : 'Resident'}</Text>
+            <Text className='mt-2 text-muted'>{session?.user?.email}</Text>
+            <Text className='text-muted'>{profile?.address}</Text>
+            <Text className='text-muted'>{profile?.contact}</Text>
+          </View>
+          {[['requests', 'My Requests'], ['appointments', 'My Appointments']].map(([id, label]) => (
+            <Pressable key={id} onPress={() => go(id)} className='mb-2 flex-row justify-between rounded-xl bg-card p-4'>
+              <Text className='text-white'>{label}</Text>
+              <Text className='text-muted'>›</Text>
+            </Pressable>
+          ))}
+          <Btn outline label='Edit profile' onPress={start} />
+          <Btn label='Log out' onPress={signOut} />
+        </>
+      )}
     </Page>
   );
 }

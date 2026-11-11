@@ -1,4 +1,4 @@
-import { Text, Pressable, ScrollView, View } from 'react-native';
+import { Text, Pressable, ScrollView, View, TextInput } from 'react-native';
 
 export function Btn({ label, onPress, disabled, outline }) {
   return (
@@ -11,6 +11,24 @@ export function Btn({ label, onPress, disabled, outline }) {
     >
       <Text className='font-semibold text-white'>{label}</Text>
     </Pressable>
+  );
+}
+
+export function Field({ label, value, onChangeText, placeholder, keyboardType, secure }) {
+  return (
+    <View className='mb-3'>
+      <Text className='mb-1 text-sm text-muted'>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor='#6B7280'
+        keyboardType={keyboardType}
+        secureTextEntry={secure}
+        autoCapitalize='none'
+        className='rounded-xl border border-line bg-card px-3 py-3 text-white'
+      />
+    </View>
   );
 }
 

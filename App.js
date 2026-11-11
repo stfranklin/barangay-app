@@ -1,8 +1,10 @@
 import './global.css';
 import { useState } from 'react';
-import { View, Text, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider } from './components/store';
+import { AuthProvider, useAuth } from './components/auth';
+import Auth from './screens/Auth';
 import Home from './screens/Home';
 import Documents from './screens/Documents';
 import Schedule from './screens/Schedule';
@@ -21,7 +23,8 @@ const TABS = [
   ['profile', 'Profile', '👤'],
 ];
 
-function Shell() {
+function Main() {
+  const { profile } = useAuth();
   const { width } = useWindowDimensions();
   const wide = width >= 900; // sidebar layout on web, tab bar on phones
   const [tab, setTab] = useState('home');
@@ -56,7 +59,7 @@ function Shell() {
         </View>
         <View className='flex-1'>
           <View className='flex-row items-center justify-end border-b border-line px-6 py-4'>
-            <Text className='text-white'>👤  Juan Dela Cruz</Text>
+            <Text className='text-white'>👤  {profile?.full_name || 'Resident'}</Text>
           </View>
           {body}
           <View className='flex-row justify-between border-t border-line px-6 py-4'>
@@ -87,13 +90,26 @@ function Shell() {
   );
 }
 
+function Gate() {
+  const { session, loading } = useAuth();
+  if (loading)
+    return (
+      <View className='flex-1 items-center justify-center bg-ink'>
+        <ActivityIndicator color='#D91E2A' />
+      </View>
+    );
+  return session ? <Main /> : <Auth />;
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
       <SafeAreaView className='flex-1 bg-ink'>
-        <AppProvider>
-          <Shell />
-        </AppProvider>
+        <AuthProvider>
+          <AppProvider>
+            <Gate />
+          </AppProvider>
+        </AuthProvider>
       </SafeAreaView>
     </SafeAreaProvider>
   );
