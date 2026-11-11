@@ -38,7 +38,7 @@ export function Page({ title, onBack, children }) {
       <View className='w-full max-w-3xl self-center'>
         {onBack && (
           <Pressable onPress={onBack}>
-            <Text className='mb-2 text-crimson'>‹ Back</Text>
+            <Text className='mb-2 text-crimson'>Back</Text>
           </Pressable>
         )}
         <Text className='mb-4 text-2xl font-bold text-white'>{title}</Text>

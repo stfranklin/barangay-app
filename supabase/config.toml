@@ -1,0 +1,2 @@
+[functions.create-resident]
+verify_jwt = true
