@@ -3,6 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import { Btn, Field, Page } from '../components/ui';
 import { useAuth } from '../components/auth';
 import { useApp, STATUSES } from '../components/store';
+import { clinicBookingError } from '../components/bookingErrors';
 import { supabase } from '../lib/supabase';
 
 const Empty = ({ text }) => <Text className='mt-8 text-center text-muted'>{text}</Text>;
@@ -50,7 +51,7 @@ export function MyAppointments({ onBack, onSelect }) {
       .then(({ data, error: queryError }) => {
         if (!active) return;
         setClinicBookings(data || []);
-        setError(queryError?.message || '');
+        setError(queryError ? clinicBookingError(queryError, 'Could not load your appointments. Check your connection and try again.') : '');
         setLoading(false);
       })
       .catch((queryError) => {
@@ -86,9 +87,11 @@ export function MyAppointments({ onBack, onSelect }) {
 }
 
 export function Notifications() {
-  const { notes } = useApp();
+  const { notes, markNotificationsRead } = useApp();
+  useEffect(() => { markNotificationsRead(); }, [markNotificationsRead]);
   return (
     <Page title='Notifications'>
+      {notes.length === 0 && <Empty text='No notifications yet.' />}
       {notes.map((n) => (
         <View key={n.id} className='mb-2 rounded-xl bg-card p-4'>
           <Text className='text-white'>{n.text}</Text>

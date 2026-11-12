@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Btn, Page } from '../components/ui';
 import { useAuth } from '../components/auth';
+import { clinicBookingError } from '../components/bookingErrors';
 import { supabase } from '../lib/supabase';
 
 const CLINIC_HOURS = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM'];
@@ -262,7 +263,7 @@ export default function ClinicFlow({ onBack, onAppointmentsUpdated }) {
       .then(({ data, error: queryError }) => {
         if (!active) return;
         setAvailability(data || []);
-        setError(queryError?.message || '');
+        setError(queryError ? clinicBookingError(queryError, 'Could not load nurse availability. Check your connection and try again.') : '');
         setLoading(false);
       })
       .catch((queryError) => {
@@ -287,7 +288,7 @@ export default function ClinicFlow({ onBack, onAppointmentsUpdated }) {
       .then(({ data, error: queryError }) => {
         if (!active) return;
         setAppointments(data || []);
-        setError(queryError?.message || '');
+        setError(queryError ? clinicBookingError(queryError, 'Could not load your appointments. Check your connection and try again.') : '');
         setLoading(false);
       })
       .catch((queryError) => {
@@ -334,10 +335,10 @@ export default function ClinicFlow({ onBack, onAppointmentsUpdated }) {
       setBusy(false);
       if (insertError) {
         if (insertError.code === '23P01' || insertError.code === '23505') {
-          setAvailabilityNotice('That appointment time was just booked. Please choose another available time.');
+          setAvailabilityNotice(clinicBookingError(insertError));
           setPage('availability');
         } else {
-          setError(insertError.message);
+          setError(clinicBookingError(insertError, 'Could not submit the appointment. Check your connection and try again.'));
         }
         return;
       }

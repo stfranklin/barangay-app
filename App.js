@@ -2,7 +2,7 @@ import './global.css';
 import { useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { AppProvider } from './components/store';
+import { AppProvider, useApp } from './components/store';
 import { AuthProvider, useAuth } from './components/auth';
 import Auth from './screens/Auth';
 import Home from './screens/Home';
@@ -16,17 +16,38 @@ const RESIDENT_MENU = [
   ['home', 'Home', 'HM'],
   ['requests', 'My Requests', 'RQ'],
   ['appointments', 'My Appointments', 'AP'],
-  ['notifications', 'Notifications', 'NT'],
   ['profile', 'Settings', 'ST'],
 ];
 const RESIDENT_TABS = [
   ['home', 'Home', 'HM'],
-  ['notifications', 'Alerts', 'NT'],
   ['profile', 'Profile', 'PR'],
 ];
 
+function NotificationBell({ count, onPress }) {
+  return (
+    <Pressable
+      accessibilityRole='button'
+      accessibilityLabel={count ? `Notifications, ${count} unread` : 'Notifications'}
+      onPress={onPress}
+      className='mr-3 h-10 w-10 items-center justify-center rounded-xl border border-line'
+    >
+      <View className='h-4 w-4 items-center'>
+        <View className='h-3.5 w-3.5 rounded-t-full border-2 border-white' />
+        <View className='-mt-px h-0.5 w-4 rounded-full bg-white' />
+        <View className='h-1 w-1 rounded-full bg-white' />
+      </View>
+      {count > 0 && (
+        <View className='absolute -right-1 -top-1 min-h-4 min-w-4 items-center justify-center rounded-full border-2 border-ink bg-crimson px-1'>
+          <Text className='text-[9px] font-bold text-white'>{count > 9 ? '9+' : count}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 function Main() {
   const { profile } = useAuth();
+  const { notes } = useApp();
   const { width } = useWindowDimensions();
   const wide = width >= 900;
   const isAdmin = profile?.role === 'admin';
@@ -34,8 +55,9 @@ function Main() {
     ? [['dashboard', 'Admin dashboard', 'AD'], ...RESIDENT_MENU]
     : RESIDENT_MENU;
   const tabs = isAdmin
-    ? [['home', 'Home', 'HM'], ['dashboard', 'Admin', 'AD'], ['notifications', 'Alerts', 'NT'], ['profile', 'Profile', 'PR']]
+    ? [['home', 'Home', 'HM'], ['dashboard', 'Admin', 'AD'], ['profile', 'Profile', 'PR']]
     : RESIDENT_TABS;
+  const unreadCount = notes.filter((note) => !note.read).length;
   const [tab, setTab] = useState(isAdmin ? 'dashboard' : 'home');
   const [svc, setSvc] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -75,7 +97,10 @@ function Main() {
         <View className='flex-1'>
           <View className='flex-row items-center justify-between border-b border-line px-6 py-4'>
             <Text className='font-semibold text-white'>{isAdmin ? 'Administrator workspace' : 'Resident services'}</Text>
-            <Text className='text-sm text-muted'>{profile?.full_name || (isAdmin ? 'Administrator' : 'Resident')}</Text>
+            <View className='flex-row items-center'>
+              <NotificationBell count={unreadCount} onPress={() => go('notifications')} />
+              <Text className='text-sm text-muted'>{profile?.full_name || (isAdmin ? 'Administrator' : 'Resident')}</Text>
+            </View>
           </View>
           {body}
           <View className='flex-row justify-between border-t border-line px-6 py-4'>
@@ -94,9 +119,12 @@ function Main() {
           <Text className='text-xs font-semibold tracking-widest text-muted'>BARANGAY SERVICES</Text>
           <Text className='font-semibold text-white'>{isAdmin ? 'Administrator' : 'Resident portal'}</Text>
         </View>
-        <Pressable onPress={() => go('profile')} className='rounded-lg border border-line px-3 py-2'>
-          <Text className='text-xs font-semibold text-white'>{profile?.full_name?.split(' ').map((part) => part[0]).join('').slice(0, 2) || 'ME'}</Text>
-        </Pressable>
+        <View className='flex-row items-center'>
+          <NotificationBell count={unreadCount} onPress={() => go('notifications')} />
+          <Pressable onPress={() => go('profile')} className='rounded-lg border border-line px-3 py-2'>
+            <Text className='text-xs font-semibold text-white'>{profile?.full_name?.split(' ').map((part) => part[0]).join('').slice(0, 2) || 'ME'}</Text>
+          </Pressable>
+        </View>
       </View>
       {body}
       <View className='flex-row border-t border-line bg-ink'>

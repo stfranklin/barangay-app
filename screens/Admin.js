@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Btn, Field, Page } from '../components/ui';
 import { useAuth } from '../components/auth';
+import { clinicBookingError } from '../components/bookingErrors';
 import { supabase } from '../lib/supabase';
 
 const EMPTY_FORM = { full_name: '', email: '', address: '', contact: '', password: '' };
@@ -40,7 +41,7 @@ export default function AdminDashboard() {
       .eq('kind', 'clinic')
       .order('date', { ascending: true });
     if (queryError) {
-      setAppointmentsError(queryError.message);
+      setAppointmentsError(clinicBookingError(queryError, 'Could not load clinic appointments. Check your connection and try again.'));
       setClinicAppointments([]);
       setAppointmentsLoading(false);
       return;
@@ -64,7 +65,7 @@ export default function AdminDashboard() {
       .update({ status })
       .eq('id', appointment.id)
       .eq('kind', 'clinic');
-    if (updateError) setAppointmentsError(updateError.message);
+    if (updateError) setAppointmentsError(clinicBookingError(updateError, 'Could not update the appointment. Please try again.'));
     else await loadClinicAppointments();
     setStatusBusy(null);
   };

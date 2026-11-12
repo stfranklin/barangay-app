@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useState } from 'react';
 
 export const STATUSES = ['Pending', 'Under Review', 'Approved', 'Ready for Claiming', 'Completed'];
 const Ctx = createContext(null);
@@ -8,9 +8,13 @@ export const useApp = () => useContext(Ctx);
 export function AppProvider({ children }) {
   const [requests, setRequests] = useState([]);
   const [bookings, setBookings] = useState([]);
-  const [notes, setNotes] = useState([{ id: 0, text: 'Welcome to Barangay Services!' }]);
+  const [notes, setNotes] = useState([]);
 
-  const notify = (text) => setNotes((n) => [{ id: Date.now() + Math.random(), text }, ...n]);
+  const notify = (text) => setNotes((n) => [{ id: Date.now() + Math.random(), text, read: false }, ...n]);
+  const markNotificationsRead = useCallback(
+    () => setNotes((current) => current.map((note) => ({ ...note, read: true }))),
+    [],
+  );
 
   const addRequest = (r) => {
     const ref = 'BRGY-' + String(requests.length + 1).padStart(4, '0');
@@ -54,7 +58,7 @@ export function AppProvider({ children }) {
   };
 
   return (
-    <Ctx.Provider value={{ requests, bookings, notes, addRequest, advance, isTaken, addBooking }}>
+    <Ctx.Provider value={{ requests, bookings, notes, addRequest, advance, isTaken, addBooking, markNotificationsRead }}>
       {children}
     </Ctx.Provider>
   );

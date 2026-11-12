@@ -23,7 +23,7 @@ do $$ begin
         start_time is not null and end_time > start_time and hours > 0
         and hours = extract(epoch from (end_time - start_time)) / 3600
         and fee = hours * 100
-      ));
+      )) not valid;
   end if;
 
   if not exists (
