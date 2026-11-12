@@ -44,7 +44,7 @@ export default function Schedule({ kind, onBack }) {
     return (
       <Page title='Booking confirmed'>
         <View className='rounded-2xl border-l-4 border-royal bg-card p-5'>
-          <Text className='text-4xl'>✅</Text>
+          <Text className='text-xs font-semibold uppercase tracking-widest text-green-400'>Confirmed</Text>
           <Text className='mt-2 text-lg font-bold text-white'>{cfg.title}</Text>
           <Text className='mt-1 text-muted'>{done.date} at {done.time}</Text>
           {kind === 'clinic' && <Text className='text-muted'>{nurse} will attend to you.</Text>}

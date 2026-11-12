@@ -38,8 +38,8 @@ export default function Auth() {
   return (
     <ScrollView className='flex-1 bg-ink' contentContainerClassName='flex-grow justify-center p-6'>
       <View className='w-full max-w-md self-center'>
-        <Text className='text-3xl font-bold text-white'>🏠 BARANGAY</Text>
-        <Text className='mb-6 mt-1 text-muted'>Fast. Easy. Convenient.</Text>
+        <Text className='text-2xl font-bold text-white'>Barangay Services Portal</Text>
+        <Text className='mb-6 mt-1 text-muted'>Sign in to manage your barangay services.</Text>
         <Text className='mb-4 text-2xl font-bold text-white'>{TITLES[mode]}</Text>
 
         {mode === 'register' && (

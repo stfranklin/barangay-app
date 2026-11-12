@@ -37,7 +37,7 @@ export default function Documents({ onBack }) {
     return (
       <Page title='Request submitted'>
         <View className='rounded-2xl border-l-4 border-crimson bg-card p-5'>
-          <Text className='text-4xl'>✅</Text>
+          <Text className='text-xs font-semibold uppercase tracking-widest text-green-400'>Request received</Text>
           <Text className='mt-2 text-muted'>Reference number</Text>
           <Text className='text-3xl font-bold text-white'>{done.ref}</Text>
           <Text className='mt-2 text-muted'>{done.doc} · Status: Pending</Text>
@@ -75,7 +75,7 @@ export default function Documents({ onBack }) {
             <Text className='text-base font-semibold text-white'>{d.name}</Text>
             <Text className='text-sm text-muted'>Fee: {d.fee}</Text>
           </View>
-          <Text className='text-2xl text-muted'>›</Text>
+          <Text className='text-xs font-semibold text-muted'>Select</Text>
         </Pressable>
       ))}
     </Page>

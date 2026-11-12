@@ -104,7 +104,7 @@ export function Profile({ go }) {
           {[['requests', 'My Requests'], ['appointments', 'My Appointments']].map(([id, label]) => (
             <Pressable key={id} onPress={() => go(id)} className='mb-2 flex-row justify-between rounded-xl bg-card p-4'>
               <Text className='text-white'>{label}</Text>
-              <Text className='text-muted'>›</Text>
+              <Text className='text-xs font-semibold text-muted'>Open</Text>
             </Pressable>
           ))}
           <Btn outline label='Edit profile' onPress={start} />
