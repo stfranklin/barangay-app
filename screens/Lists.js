@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Btn, Field, Page } from '../components/ui';
 import { useAuth } from '../components/auth';
@@ -51,9 +51,11 @@ export function MyAppointments({ onBack }) {
 }
 
 export function Notifications() {
-  const { notes } = useApp();
+  const { notes, markNotificationsRead } = useApp();
+  useEffect(() => { markNotificationsRead(); }, [markNotificationsRead]);
   return (
     <Page title='Notifications'>
+      {notes.length === 0 && <Empty text='No notifications yet.' />}
       {notes.map((n) => (
         <View key={n.id} className='mb-2 rounded-xl bg-card p-4'>
           <Text className='text-white'>{n.text}</Text>
