@@ -29,6 +29,8 @@ export default function Documents({ onBack }) {
   const { addRequest } = useApp();
   const [doc, setDoc] = useState(null);
   const [done, setDone] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
   const [f, setF] = useState({ name: '', address: '', contact: '', purpose: '' });
   const set = (k) => (v) => setF({ ...f, [k]: v });
   const ok = f.name && f.address && f.contact && f.purpose;
@@ -58,7 +60,17 @@ export default function Documents({ onBack }) {
         <Field label='Address' value={f.address} onChangeText={set('address')} placeholder='Purok, Barangay' />
         <Field label='Contact number' value={f.contact} onChangeText={set('contact')} placeholder='09XXXXXXXXX' keyboardType='phone-pad' />
         <Field label='Purpose' value={f.purpose} onChangeText={set('purpose')} placeholder='e.g. Employment' />
-        <Btn label='Submit request' disabled={!ok} onPress={() => setDone(addRequest({ ...f, doc: doc.name }))} />
+        {err ? <Text className='mt-2 text-crimson'>{err}</Text> : null}
+        <Btn
+          label={busy ? 'Submitting...' : 'Submit request'}
+          disabled={!ok || busy}
+          onPress={async () => {
+            setBusy(true); setErr('');
+            const { request, error } = await addRequest({ ...f, doc: doc.name });
+            setBusy(false);
+            if (error) setErr('Could not submit your request: ' + error); else setDone(request);
+          }}
+        />
       </Page>
     );
 

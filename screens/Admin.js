@@ -4,6 +4,9 @@ import { Btn, Field, Page } from '../components/ui';
 import { useAuth } from '../components/auth';
 import { clinicBookingError } from '../components/bookingErrors';
 import { supabase } from '../lib/supabase';
+import { REJECTED, rowToRequest, statusLabel } from '../components/store';
+
+const DOC_NEXT = ['Start review', 'Approve', 'Mark ready for claiming', 'Mark completed'];
 
 const EMPTY_FORM = { full_name: '', email: '', address: '', contact: '', password: '' };
 
@@ -17,6 +20,10 @@ export default function AdminDashboard() {
   const [appointmentsError, setAppointmentsError] = useState('');
   const [busy, setBusy] = useState(false);
   const [statusBusy, setStatusBusy] = useState(null);
+  const [docRequests, setDocRequests] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(true);
+  const [docsError, setDocsError] = useState('');
+  const [docBusy, setDocBusy] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const set = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
@@ -56,7 +63,23 @@ export default function AdminDashboard() {
     setAppointmentsLoading(false);
   }, []);
 
-  useEffect(() => { loadResidents(); loadClinicAppointments(); }, [loadResidents, loadClinicAppointments]);
+  const loadDocRequests = useCallback(async () => {
+    setDocsLoading(true);
+    const { data, error: queryError } = await supabase.from('requests').select('*').order('created_at', { ascending: false });
+    setDocsError(queryError?.message || '');
+    setDocRequests((data || []).map(rowToRequest));
+    setDocsLoading(false);
+  }, []);
+
+  useEffect(() => { loadResidents(); loadClinicAppointments(); loadDocRequests(); }, [loadResidents, loadClinicAppointments, loadDocRequests]);
+
+  const setDocStatus = async (req, status) => {
+    setDocBusy(req.id);
+    setDocsError('');
+    const { error: updateError } = await supabase.from('requests').update({ status }).eq('id', req.id);
+    if (updateError) setDocsError(updateError.message); else await loadDocRequests();
+    setDocBusy(null);
+  };
 
   const updateAppointmentStatus = async (appointment, status) => {
     setStatusBusy(appointment.id);
@@ -124,6 +147,31 @@ export default function AdminDashboard() {
           {resident.email ? <Text className='mt-1 text-sm text-muted'>{resident.email}</Text> : null}
           <Text className='mt-1 text-sm text-muted'>{resident.address || 'No address on file'}</Text>
           {resident.contact ? <Text className='text-sm text-muted'>{resident.contact}</Text> : null}
+        </View>
+      ))}
+
+      <View className='mb-2 mt-8 flex-row items-center justify-between'>
+        <Text className='text-lg font-bold text-white'>Document requests</Text>
+        <Pressable onPress={loadDocRequests} accessibilityRole='button'>
+          <Text className='text-sm font-semibold text-crimson'>Refresh</Text>
+        </Pressable>
+      </View>
+      {docsLoading ? <Text className='py-3 text-muted'>Loading document requests...</Text> : null}
+      {docsError ? <Text className='py-3 text-crimson'>{docsError}</Text> : null}
+      {!docsLoading && !docsError && docRequests.length === 0 ? <Text className='py-3 text-muted'>No document requests.</Text> : null}
+      {docRequests.map((r) => (
+        <View key={r.id} className='mb-3 rounded-2xl border border-line bg-card p-4'>
+          <Text className='font-semibold text-white'>{r.doc} | {r.ref}</Text>
+          <Text className='mt-1 text-sm text-muted'>{r.name} | {r.contact}</Text>
+          <Text className='text-sm text-muted'>{r.address}</Text>
+          <Text className='text-sm text-muted'>Purpose: {r.purpose} | {r.date}</Text>
+          <Text className={`mt-2 font-semibold ${r.status === REJECTED ? 'text-crimson' : r.status >= 3 ? 'text-green-500' : 'text-royal'}`}>{statusLabel(r.status)}</Text>
+          {r.status < 4 && (
+            <View className='flex-row gap-2'>
+              <View className='flex-1'><Btn label={docBusy === r.id ? 'Updating...' : DOC_NEXT[r.status]} disabled={docBusy !== null} onPress={() => setDocStatus(r, r.status + 1)} /></View>
+              {r.status <= 2 && <View className='flex-1'><Btn outline label='Reject' disabled={docBusy !== null} onPress={() => setDocStatus(r, REJECTED)} /></View>}
+            </View>
+          )}
         </View>
       ))}
 

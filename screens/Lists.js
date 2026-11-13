@@ -2,29 +2,39 @@ import { useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Btn, Field, Page } from '../components/ui';
 import { useAuth } from '../components/auth';
-import { useApp, STATUSES } from '../components/store';
+import { useApp, STATUSES, REJECTED, statusLabel } from '../components/store';
 import { clinicBookingError } from '../components/bookingErrors';
 import { supabase } from '../lib/supabase';
 
 const Empty = ({ text }) => <Text className='mt-8 text-center text-muted'>{text}</Text>;
 
 export function MyRequests({ onBack }) {
-  const { requests } = useApp();
+  const { requests, loadRequests } = useApp();
+  const [err, setErr] = useState('');
+  const refresh = async () => setErr((await loadRequests()) || '');
   return (
     <Page title='My Requests' onBack={onBack}>
+      <Pressable onPress={refresh}><Text className='mb-3 text-sm font-semibold text-crimson'>Refresh</Text></Pressable>
+      {err ? <Text className='mb-3 text-crimson'>{err}</Text> : null}
       {requests.length === 0 && <Empty text='No document requests yet.' />}
-      {requests.map((r) => (
-        <View key={r.ref} className='mb-3 rounded-2xl border-l-4 border-crimson bg-card p-4'>
-          <Text className='font-bold text-white'>{r.doc}</Text>
-          <Text className='text-sm text-muted'>{r.ref} | {r.date}</Text>
-          <Text className='mt-2 font-semibold text-crimson'>{STATUSES[r.status]}</Text>
-          <View className='mt-2 flex-row gap-1'>
-            {STATUSES.map((s, i) => (
-              <View key={s} className={`h-1 flex-1 rounded-full ${i <= r.status ? 'bg-crimson' : 'bg-line'}`} />
-            ))}
+      {requests.map((r) => {
+        const rejected = r.status === REJECTED;
+        return (
+          <View key={r.id} className='mb-3 rounded-2xl border-l-4 border-crimson bg-card p-4'>
+            <Text className='font-bold text-white'>{r.doc}</Text>
+            <Text className='text-sm text-muted'>{r.ref} | {r.date}</Text>
+            <Text className={`mt-2 font-semibold ${rejected ? 'text-crimson' : r.status >= 3 ? 'text-green-500' : 'text-royal'}`}>{statusLabel(r.status)}</Text>
+            {!rejected && (
+              <View className='mt-2 flex-row gap-1'>
+                {STATUSES.map((st, i) => (
+                  <View key={st} className={`h-1 flex-1 rounded-full ${i <= r.status ? 'bg-crimson' : 'bg-line'}`} />
+                ))}
+              </View>
+            )}
+            {r.status === 3 && <Text className='mt-2 text-sm text-muted'>Ready for claiming at the Barangay Hall. Bring a valid ID and your reference number.</Text>}
           </View>
-        </View>
-      ))}
+        );
+      })}
     </Page>
   );
 }

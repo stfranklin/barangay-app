@@ -1,10 +1,21 @@
-import { createContext, useCallback, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './auth';
 
 export const STATUSES = ['Pending', 'Under Review', 'Approved', 'Ready for Claiming', 'Completed'];
+export const REJECTED = 5; // status 0-4 follow STATUSES, 5 = Rejected
+export const statusLabel = (s) => (s === REJECTED ? 'Rejected' : STATUSES[s] || 'Pending');
+export const rowToRequest = (r) => ({
+  id: r.id,
+  ref: 'BRGY-' + String(r.id).padStart(4, '0'),
+  doc: r.doc, name: r.full_name, address: r.address, contact: r.contact, purpose: r.purpose,
+  status: r.status,
+  date: new Date(r.created_at).toLocaleDateString(),
+});
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
-// Everything is kept in memory (resets on refresh). Swap for a database later.
+// Document requests are saved in Supabase. Bookings and notifications are still in memory.
 export function AppProvider({ children }) {
   const [requests, setRequests] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -16,19 +27,26 @@ export function AppProvider({ children }) {
     [],
   );
 
-  const addRequest = (r) => {
-    const ref = 'BRGY-' + String(requests.length + 1).padStart(4, '0');
-    const req = { ...r, ref, status: 0, date: new Date().toLocaleDateString() };
-    setRequests([req, ...requests]);
-    notify(`Request ${ref} (${r.doc}) was submitted.`);
-    return req;
-  };
+  const { session } = useAuth();
+  const userId = session?.user?.id;
 
-  const advance = (ref) => {
-    const r = requests.find((x) => x.ref === ref);
-    if (!r || r.status >= STATUSES.length - 1) return;
-    setRequests(requests.map((x) => (x.ref === ref ? { ...x, status: x.status + 1 } : x)));
-    notify(`Request ${ref} is now "${STATUSES[r.status + 1]}".`);
+  const loadRequests = useCallback(async () => {
+    if (!userId) { setRequests([]); return null; }
+    const { data, error } = await supabase.from('requests').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    if (!error) setRequests((data || []).map(rowToRequest));
+    return error?.message || null;
+  }, [userId]);
+  useEffect(() => { loadRequests(); }, [loadRequests]);
+
+  const addRequest = async (r) => {
+    const { data, error } = await supabase.from('requests')
+      .insert({ user_id: userId, doc: r.doc, full_name: r.name, address: r.address, contact: r.contact, purpose: r.purpose, status: 0 })
+      .select().single();
+    if (error) return { error: error.message };
+    const req = rowToRequest(data);
+    setRequests((current) => [req, ...current]);
+    notify(`Request ${req.ref} (${req.doc}) was submitted.`);
+    return { request: req };
   };
 
   const toMinutes = (time) => {
@@ -58,7 +76,7 @@ export function AppProvider({ children }) {
   };
 
   return (
-    <Ctx.Provider value={{ requests, bookings, notes, addRequest, advance, isTaken, addBooking, markNotificationsRead }}>
+    <Ctx.Provider value={{ requests, bookings, notes, addRequest, loadRequests, isTaken, addBooking, markNotificationsRead }}>
       {children}
     </Ctx.Provider>
   );
