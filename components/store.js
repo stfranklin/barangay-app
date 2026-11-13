@@ -31,14 +31,29 @@ export function AppProvider({ children }) {
     notify(`Request ${ref} is now "${STATUSES[r.status + 1]}".`);
   };
 
-  const isTaken = (kind, date, time) =>
-    bookings.some((b) => b.kind === kind && b.date === date && b.time === time);
+  const toMinutes = (time) => {
+    const [clock, period] = time.split(' ');
+    let [hours, minutes] = clock.split(':').map(Number);
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  };
+  const isTaken = (kind, date, startTime, endTime = startTime) =>
+    bookings.some((b) => {
+      if (b.kind !== kind || b.date !== date) return false;
+      if (kind !== 'court') return b.time === startTime;
+      const bookedStart = toMinutes(b.startTime || b.time);
+      const bookedEnd = toMinutes(b.endTime || b.time) + (b.endTime ? 0 : 60);
+      return toMinutes(startTime) < bookedEnd && toMinutes(endTime) > bookedStart;
+    });
 
   // Conflict detection: refuses a slot that is already reserved.
   const addBooking = (b) => {
-    if (isTaken(b.kind, b.date, b.time)) return false;
+    if (isTaken(b.kind, b.date, b.startTime || b.time, b.endTime || b.time)) return false;
     setBookings([{ ...b, id: Date.now() }, ...bookings]);
-    notify(`${b.title} booked for ${b.date}, ${b.time}.`);
+    notify(b.kind === 'court'
+      ? `${b.title} booked for ${b.date}, ${b.startTime}–${b.endTime}. Total: ₱${b.fee}.`
+      : `${b.title} booked for ${b.date}, ${b.time}.`);
     return true;
   };
 

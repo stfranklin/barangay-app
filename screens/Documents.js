@@ -4,8 +4,8 @@ import { Btn, Page } from '../components/ui';
 import { useApp } from '../components/store';
 
 const DOCS = [
-  { name: 'Barangay Clearance', fee: '₱50', reqs: ['Valid ID', 'Proof of residency', '1x1 photo'] },
-  { name: 'Certificate of Residency', fee: '₱30', reqs: ['Valid ID', 'Proof of residency'] },
+  { name: 'Barangay Clearance', fee: 'PHP 50', reqs: ['Valid ID', 'Proof of residency', '1x1 photo'] },
+  { name: 'Certificate of Residency', fee: 'PHP 30', reqs: ['Valid ID', 'Proof of residency'] },
   { name: 'Certificate of Indigency', fee: 'Free', reqs: ['Valid ID', 'Household record'] },
 ];
 
@@ -40,7 +40,7 @@ export default function Documents({ onBack }) {
           <Text className='text-xs font-semibold uppercase tracking-widest text-green-400'>Request received</Text>
           <Text className='mt-2 text-muted'>Reference number</Text>
           <Text className='text-3xl font-bold text-white'>{done.ref}</Text>
-          <Text className='mt-2 text-muted'>{done.doc} · Status: Pending</Text>
+          <Text className='mt-2 text-muted'>{done.doc} | Status: Pending</Text>
           <Text className='mt-2 text-muted'>Track it under My Requests. Bring a valid ID when claiming.</Text>
         </View>
         <Btn label='Back to Home' onPress={onBack} />

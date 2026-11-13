@@ -1,5 +1,5 @@
 import './global.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from './components/store';
@@ -7,17 +7,19 @@ import Icon from './components/Icon';
 import { AuthProvider, useAuth } from './components/auth';
 import Auth from './screens/Auth';
 import Home from './screens/Home';
+import AdminDashboard from './screens/Admin';
 import Documents from './screens/Documents';
 import Schedule from './screens/Schedule';
+import ClinicFlow, { AppointmentDetailsPage } from './screens/Clinic';
 import { MyRequests, MyAppointments, Notifications, Profile } from './screens/Lists';
 
-const SIDEBAR = [
+const RESIDENT_MENU = [
   ['home', 'Home', 'home'],
   ['requests', 'My Requests', 'document'],
   ['appointments', 'My Appointments', 'calendar'],
   ['profile', 'Settings', 'settings'],
 ];
-const TABS = [
+const RESIDENT_TABS = [
   ['home', 'Home', 'home'],
   ['profile', 'Profile', 'profile'],
 ];
@@ -43,20 +45,32 @@ function NotificationBell({ count, onPress }) {
 function Main() {
   const { profile } = useAuth();
   const { notes } = useApp();
-  const unreadCount = notes.filter((note) => !note.read).length;
   const { width } = useWindowDimensions();
   const wide = width >= 900;
-  const [tab, setTab] = useState('home');
+  const isAdmin = profile?.role === 'admin';
+  const sidebar = isAdmin
+    ? [['dashboard', 'Admin dashboard', 'settings'], ...RESIDENT_MENU]
+    : RESIDENT_MENU;
+  const tabs = isAdmin
+    ? [['home', 'Home', 'home'], ['dashboard', 'Admin', 'settings'], ['profile', 'Profile', 'profile']]
+    : RESIDENT_TABS;
+  const unreadCount = notes.filter((note) => !note.read).length;
+  const [tab, setTab] = useState(isAdmin ? 'dashboard' : 'home');
   const [svc, setSvc] = useState(null);
-  const go = (nextTab) => { setSvc(null); setTab(nextTab); };
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  useEffect(() => { if (isAdmin) setTab('dashboard'); }, [isAdmin]);
+  const go = (nextTab) => { setSvc(null); setSelectedAppointment(null); setTab(nextTab); };
   const back = wide ? null : () => go('profile');
 
   let body;
   if (svc === 'documents') body = <Documents onBack={() => setSvc(null)} />;
+  else if (svc === 'clinic') body = <ClinicFlow key={svc} onBack={() => setSvc(null)} />;
   else if (svc) body = <Schedule key={svc} kind={svc} onBack={() => setSvc(null)} />;
+  else if (tab === 'dashboard' && isAdmin) body = <AdminDashboard />;
   else if (tab === 'home') body = <Home wide={wide} onOpen={setSvc} />;
   else if (tab === 'requests') body = <MyRequests onBack={back} />;
-  else if (tab === 'appointments') body = <MyAppointments onBack={back} />;
+  else if (tab === 'appointments' && selectedAppointment) body = <AppointmentDetailsPage appointment={selectedAppointment} onBack={() => setSelectedAppointment(null)} />;
+  else if (tab === 'appointments') body = <MyAppointments onBack={back} onSelect={setSelectedAppointment} />;
   else if (tab === 'notifications') body = <Notifications />;
   else body = <Profile go={go} />;
 
@@ -68,7 +82,7 @@ function Main() {
             <Text className='text-xs font-semibold tracking-widest text-muted'>BARANGAY</Text>
             <Text className='text-lg font-bold text-white'>Services Portal</Text>
           </View>
-          {SIDEBAR.map(([id, label, icon]) => (
+          {sidebar.map(([id, label, icon]) => (
             <Pressable key={id} onPress={() => go(id)} className={`mb-1 flex-row items-center rounded-xl px-3 py-3 ${!svc && tab === id ? 'bg-card' : ''}`}>
               <View className={`mr-3 h-9 w-9 items-center justify-center rounded-lg ${!svc && tab === id ? 'bg-crimson' : 'bg-line'}`}>
                 <Icon name={icon} color='#F3F4F6' size={19} />
@@ -79,10 +93,10 @@ function Main() {
         </View>
         <View className='flex-1'>
           <View className='flex-row items-center justify-between border-b border-line px-6 py-4'>
-            <Text className='font-semibold text-white'>Resident services</Text>
+            <Text className='font-semibold text-white'>{isAdmin ? 'Administrator workspace' : 'Resident services'}</Text>
             <View className='flex-row items-center'>
               <NotificationBell count={unreadCount} onPress={() => go('notifications')} />
-              <Text className='text-sm text-muted'>{profile?.full_name || 'Resident'}</Text>
+              <Text className='text-sm text-muted'>{profile?.full_name || (isAdmin ? 'Administrator' : 'Resident')}</Text>
             </View>
           </View>
           {body}
@@ -100,18 +114,18 @@ function Main() {
       <View className='flex-row items-center justify-between border-b border-line px-5 py-4'>
         <View>
           <Text className='text-xs font-semibold tracking-widest text-muted'>BARANGAY SERVICES</Text>
-          <Text className='font-semibold text-white'>Resident portal</Text>
+          <Text className='font-semibold text-white'>{isAdmin ? 'Administrator' : 'Resident portal'}</Text>
         </View>
         <View className='flex-row items-center'>
           <NotificationBell count={unreadCount} onPress={() => go('notifications')} />
           <Pressable onPress={() => go('profile')} className='rounded-lg border border-line px-3 py-2'>
-            <Icon name='profile' color='#F3F4F6' size={20} />
+            <Text className='text-xs font-semibold text-white'>{profile?.full_name?.split(' ').map((part) => part[0]).join('').slice(0, 2) || 'ME'}</Text>
           </Pressable>
         </View>
       </View>
       {body}
       <View className='flex-row border-t border-line bg-ink'>
-        {TABS.map(([id, label, icon]) => (
+        {tabs.map(([id, label, icon]) => (
           <Pressable key={id} onPress={() => go(id)} className='flex-1 items-center py-2'>
             <View className={`mb-1 h-9 w-9 items-center justify-center rounded-lg ${!svc && active === id ? 'bg-crimson' : 'bg-line'}`}>
               <Icon name={icon} color='#F3F4F6' size={19} />
