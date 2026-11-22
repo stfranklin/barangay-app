@@ -2,7 +2,7 @@ name: Supabase keep-alive
 
 on:
   schedule:
-    - cron: '0 3 * * 1,4'   # Mondays and Thursdays, 03:00 UTC
+    - cron: '0 */8 * * *'   # every 8 hours, 3 times a day
   workflow_dispatch:         # lets you run it by hand
 
 jobs:
@@ -14,8 +14,10 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
+          URL=$(printf '%s' "$SUPABASE_URL" | tr -d '[:space:]"')
+          KEY=$(printf '%s' "$SUPABASE_KEY" | tr -d '[:space:]"')
           curl --fail --silent --show-error -X POST \
-            "$SUPABASE_URL/rest/v1/rpc/keep_alive" \
-            -H "apikey: $SUPABASE_KEY" \
+            "$URL/rest/v1/rpc/keep_alive" \
+            -H "apikey: $KEY" \
             -H "Content-Type: application/json" \
             -d '{}'
