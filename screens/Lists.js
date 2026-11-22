@@ -21,7 +21,7 @@ export function MyRequests({ onBack }) {
         const rejected = r.status === REJECTED;
         return (
           <View key={r.id} className='mb-3 rounded-2xl border-l-4 border-crimson bg-card p-4'>
-            <Text className='font-bold text-white'>{r.doc}</Text>
+            <Text className='font-bold text-ink'>{r.doc}</Text>
             <Text className='text-sm text-muted'>{r.ref} | {r.date}</Text>
             <Text className={`mt-2 font-semibold ${rejected ? 'text-crimson' : r.status >= 3 ? 'text-green-500' : 'text-royal'}`}>{statusLabel(r.status)}</Text>
             {!rejected && (
@@ -84,7 +84,7 @@ export function MyAppointments({ onBack, onSelect }) {
           onPress={() => onSelect?.(b)}
           className={`mb-3 rounded-2xl border-l-4 bg-card p-4 ${b.kind === 'court' ? 'border-royal' : 'border-crimson'}`}
         >
-          <Text className='font-bold text-white'>{b.service || b.title || 'Clinic appointment'}</Text>
+          <Text className='font-bold text-ink'>{b.service || b.title || 'Clinic appointment'}</Text>
           <Text className='text-muted'>{b.date} | {b.kind === 'court' ? `${b.startTime} - ${b.endTime}` : `at ${b.time}`}</Text>
           {b.kind === 'court' && <Text className='text-muted'>{b.hours} hour{b.hours === 1 ? '' : 's'} | PHP {b.fee}</Text>}
           {b.nurse && <Text className='text-muted'>{b.nurse}</Text>}
@@ -104,7 +104,7 @@ export function Notifications() {
       {notes.length === 0 && <Empty text='No notifications yet.' />}
       {notes.map((n) => (
         <View key={n.id} className='mb-2 rounded-xl bg-card p-4'>
-          <Text className='text-white'>{n.text}</Text>
+          <Text className='text-ink'>{n.text}</Text>
         </View>
       ))}
     </Page>
@@ -157,14 +157,14 @@ export function Profile({ go }) {
       ) : (
         <>
           <View className='mb-4 rounded-2xl bg-card p-4'>
-            <Text className='text-lg font-bold text-white'>{profile?.full_name || 'Resident'}</Text>
+            <Text className='text-lg font-bold text-ink'>{profile?.full_name || 'Resident'}</Text>
             <Text className='text-muted'>{profile?.role === 'admin' ? 'Admin' : 'Resident'}</Text>
             <Text className='mt-2 text-muted'>{session?.user?.email}</Text>
             <Text className='text-muted'>{profile?.address}</Text>
             <Text className='text-muted'>{profile?.contact}</Text>
           </View>
           <View className='mb-4 rounded-2xl border border-line bg-card p-4'>
-            <Text className='mb-3 font-semibold text-white'>Change password</Text>
+            <Text className='mb-3 font-semibold text-ink'>Change password</Text>
             <Field label='New password' value={password} onChangeText={setPassword} secure />
             <Field label='Confirm new password' value={confirmPassword} onChangeText={setConfirmPassword} secure />
             {err ? <Text className='text-crimson'>{err}</Text> : null}
@@ -173,7 +173,7 @@ export function Profile({ go }) {
           </View>
           {[['requests', 'My Requests'], ['appointments', 'My Appointments']].map(([id, label]) => (
             <Pressable key={id} onPress={() => go(id)} className='mb-2 flex-row justify-between rounded-xl bg-card p-4'>
-              <Text className='text-white'>{label}</Text>
+              <Text className='text-ink'>{label}</Text>
               <Text className='text-xs font-semibold text-muted'>Open</Text>
             </Pressable>
           ))}

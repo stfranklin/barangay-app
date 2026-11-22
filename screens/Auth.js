@@ -27,14 +27,14 @@ export default function Auth() {
   };
 
   return (
-    <ScrollView className='flex-1 bg-ink' contentContainerClassName='flex-grow justify-center p-6'>
+    <ScrollView className='flex-1 bg-canvas' contentContainerClassName='flex-grow justify-center p-6'>
       <View className='w-full max-w-md self-center'>
         <View className='mb-8 border-l-4 border-crimson pl-4'>
           <Text className='text-sm font-semibold tracking-widest text-muted'>BARANGAY SERVICES PORTAL</Text>
-          <Text className='mt-2 text-3xl font-bold text-white'>Resident Services</Text>
+          <Text className='mt-2 text-3xl font-bold text-ink'>Resident Services</Text>
           <Text className='mt-1 text-muted'>Access local services and manage your requests.</Text>
         </View>
-        <Text className='mb-4 text-2xl font-bold text-white'>{mode === 'login' ? 'Sign in' : 'Reset password'}</Text>
+        <Text className='mb-4 text-2xl font-bold text-ink'>{mode === 'login' ? 'Sign in' : 'Reset password'}</Text>
         <Field label='Email address' value={f.email} onChangeText={set('email')} placeholder='you@example.com' keyboardType='email-address' />
         {mode === 'login' && <Field label='Password' value={f.password} onChangeText={set('password')} secure />}
         {err ? <Text className='mt-1 text-crimson'>{err}</Text> : null}

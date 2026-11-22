@@ -72,9 +72,9 @@ export default function Schedule({ kind, onBack }) {
       <Page title='Booking confirmed'>
         <View className='rounded-2xl border-l-4 border-royal bg-card p-5'>
           <Text className='text-xs font-semibold uppercase tracking-widest text-green-400'>Confirmed</Text>
-          <Text className='mt-2 text-lg font-bold text-white'>{cfg.title}</Text>
+          <Text className='mt-2 text-lg font-bold text-ink'>{cfg.title}</Text>
           <Text className='mt-1 text-muted'>{done.date} · {done.time}{kind === 'court' ? `–${done.endTime}` : ''}</Text>
-          {kind === 'court' && <Text className='mt-1 font-semibold text-white'>{done.hours} hour{done.hours === 1 ? '' : 's'} · ₱{done.fee}</Text>}
+          {kind === 'court' && <Text className='mt-1 font-semibold text-ink'>{done.hours} hour{done.hours === 1 ? '' : 's'} · ₱{done.fee}</Text>}
           {kind === 'clinic' && <Text className='text-muted'>{nurse} will attend to you.</Text>}
           <Text className='mt-2 text-muted'>{cfg.note}</Text>
         </View>
@@ -85,40 +85,40 @@ export default function Schedule({ kind, onBack }) {
   return (
     <Page title={cfg.title} onBack={onBack}>
       <Text className='mb-3 text-muted'>{cfg.note}</Text>
-      <Text className='mb-2 font-semibold text-white'>Choose a date</Text>
+      <Text className='mb-2 font-semibold text-ink'>Choose a date</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {days.map((x, i) => (
           <Pressable key={i} onPress={() => { setDay(i); setTime(null); setEndTime(null); setErr(''); }} className={`mr-2 items-center rounded-xl px-4 py-3 ${i === day ? cfg.acc : 'bg-card'}`}>
-            <Text className='text-xs text-white'>{x.toLocaleDateString('en-US', { weekday: 'short' })}</Text>
-            <Text className='text-lg font-bold text-white'>{x.getDate()}</Text>
+            <Text className='text-xs text-ink'>{x.toLocaleDateString('en-US', { weekday: 'short' })}</Text>
+            <Text className='text-lg font-bold text-ink'>{x.getDate()}</Text>
           </Pressable>
         ))}
       </ScrollView>
 
       {kind === 'clinic' && <Text className='mt-3 text-muted'>{closed ? 'Clinic closed. No nurse on duty this day.' : `Nurse on duty: ${nurse}`}</Text>}
 
-      <Text className='mb-2 mt-4 font-semibold text-white'>{kind === 'court' ? 'Choose a start time' : 'Choose a time'}</Text>
+      <Text className='mb-2 mt-4 font-semibold text-ink'>{kind === 'court' ? 'Choose a start time' : 'Choose a time'}</Text>
       <View className='flex-row flex-wrap gap-2'>
         {(kind === 'court' ? courtStartOptions.map(formatTime) : SLOTS).map((t) => {
           const off = closed || (kind === 'clinic' && taken(t));
           return (
             <Pressable key={t} disabled={off} onPress={() => { setTime(t); setEndTime(null); setErr(''); }} className={`rounded-xl px-4 py-3 ${off ? 'bg-line' : t === time ? cfg.acc : 'bg-card'}`}>
-              <Text className={off ? 'text-muted' : 'text-white'}>{t}{off && !closed ? ' (Reserved)' : ''}</Text>
+              <Text className={off ? 'text-muted' : 'text-ink'}>{t}{off && !closed ? ' (Reserved)' : ''}</Text>
             </Pressable>
           );
         })}
       </View>
       {kind === 'court' && time && <>
-        <Text className='mb-2 mt-4 font-semibold text-white'>Choose an end time</Text>
+        <Text className='mb-2 mt-4 font-semibold text-ink'>Choose an end time</Text>
         <View className='flex-row flex-wrap gap-2'>
           {courtEndOptions.map((end) => {
             const label = formatTime(end);
             return <Pressable key={end} onPress={() => setEndTime(label)} className={`rounded-xl px-4 py-3 ${label === endTime ? cfg.acc : 'bg-card'}`}>
-              <Text className='text-white'>{label}</Text>
+              <Text className='text-ink'>{label}</Text>
             </Pressable>;
           })}
         </View>
-        {endTime && <Text className='mt-4 rounded-xl bg-card p-4 font-semibold text-white'>{courtHours} hour{courtHours === 1 ? '' : 's'} × ₱{COURT_RATE} = ₱{courtFee}</Text>}
+        {endTime && <Text className='mt-4 rounded-xl bg-card p-4 font-semibold text-ink'>{courtHours} hour{courtHours === 1 ? '' : 's'} × ₱{COURT_RATE} = ₱{courtFee}</Text>}
       </>}
       {err ? <Text className='mt-3 text-crimson'>{err}</Text> : null}
       <Btn label='Confirm booking' disabled={kind === 'court' ? !time || !endTime : !time} onPress={confirm} />
