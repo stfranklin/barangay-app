@@ -65,9 +65,9 @@ function ClinicServicesPage({ onSelect, onBack }) {
     <Page title='Clinic services' onBack={onBack}>
       <Text className='mb-5 text-muted'>Choose the type of clinic appointment you need.</Text>
       {SERVICES.map((service, index) => (
-        <Pressable key={service.id} onPress={() => onSelect(service)} className='mb-3 flex-row items-center rounded-2xl border-l-4 border-crimson bg-card p-4'>
-          <View className='mr-4 h-9 w-9 items-center justify-center rounded-lg bg-line'>
-            <Text className='text-xs font-bold text-muted'>0{index + 1}</Text>
+        <Pressable key={service.id} onPress={() => onSelect(service)} className='mb-3 flex-row items-center rounded-2xl border-l-4 border-royal bg-card p-4'>
+          <View className='mr-4 h-9 w-9 items-center justify-center rounded-lg bg-[#eaf2ff]'>
+            <Text className='text-xs font-bold text-royal'>0{index + 1}</Text>
           </View>
           <View className='flex-1'>
             <Text className='font-semibold text-ink'>{service.name}</Text>
@@ -120,9 +120,9 @@ function NurseAvailabilityPage({ dates, selectedDate, setSelectedDate, bookings,
         {dates.map((date) => {
           const day = dateFromKey(date);
           return (
-            <Pressable key={date} onPress={() => setSelectedDate(date)} className={`mr-2 items-center rounded-xl px-4 py-3 ${date === selectedDate ? 'bg-crimson' : 'bg-card'}`}>
-              <Text className='text-xs text-ink'>{day.toLocaleDateString('en-PH', { weekday: 'short' })}</Text>
-              <Text className='text-lg font-bold text-ink'>{day.getDate()}</Text>
+            <Pressable key={date} onPress={() => setSelectedDate(date)} className={`mr-2 items-center rounded-xl px-4 py-3 ${date === selectedDate ? 'bg-[#173b70]' : 'border border-line bg-card'}`}>
+              <Text className={`text-xs ${date === selectedDate ? 'text-blue-100' : 'text-muted'}`}>{day.toLocaleDateString('en-PH', { weekday: 'short' })}</Text>
+              <Text className={`text-lg font-bold ${date === selectedDate ? 'text-white' : 'text-ink'}`}>{day.getDate()}</Text>
             </Pressable>
           );
         })}
@@ -140,9 +140,9 @@ function NurseAvailabilityPage({ dates, selectedDate, setSelectedDate, bookings,
                 key={time}
                 disabled={loading || booked || Boolean(error)}
                 onPress={() => onChoose(nurse, time)}
-                className={`rounded-lg px-3 py-2 ${booked || loading || error ? 'bg-line' : 'bg-royal'}`}
+                className={`rounded-xl border px-3 py-2.5 ${booked || loading || error ? 'border-[#e8edf3] bg-[#f1f3f6]' : 'border-[#173b70] bg-[#173b70]'}`}
               >
-                <Text className={booked || loading || error ? 'text-muted' : 'text-ink'}>{time}{booked ? ' · Booked' : ''}</Text>
+                <Text className={`text-sm font-medium ${booked || loading || error ? 'text-muted' : 'text-white'}`}>{time}{booked ? ' · Booked' : ''}</Text>
               </Pressable>
             ))}
           </View>
@@ -177,7 +177,7 @@ function AppointmentBookingForm({ service, date, nurse, time, profile, onConfirm
 function AppointmentConfirmationPage({ booking, onAppointments, onHome }) {
   return (
     <Page title='Appointment submitted'>
-      <View className='mb-4 rounded-2xl border-l-4 border-crimson bg-card p-5'>
+      <View className='mb-4 rounded-2xl border-l-4 border-royal bg-card p-5'>
         <Text className='text-xs font-semibold tracking-widest text-green-500'>REQUEST RECEIVED</Text>
         <Text className='mt-3 text-lg font-bold text-ink'>{booking.service}</Text>
         <Text className='mt-2 text-sm text-muted'>{formatDate(booking.date)}</Text>
@@ -198,7 +198,7 @@ function ClinicMyAppointmentsPage({ appointments, loading, error, onSelect, onBa
       {error ? <Text className='py-4 text-crimson'>{error}</Text> : null}
       {!loading && !error && appointments.length === 0 ? <Text className='py-4 text-muted'>You have no clinic appointments yet.</Text> : null}
       {appointments.map((appointment) => (
-        <Pressable key={appointment.id} onPress={() => onSelect(appointment)} className='mb-3 rounded-2xl border-l-4 border-crimson bg-card p-4'>
+        <Pressable key={appointment.id} onPress={() => onSelect(appointment)} className='mb-3 rounded-2xl border-l-4 border-royal bg-card p-4'>
           <Text className='font-semibold text-ink'>{appointment.service}</Text>
           <Text className='mt-1 text-sm text-muted'>{formatDate(appointment.date)} | {appointment.time}</Text>
           <Text className='text-sm text-muted'>{appointment.nurse}</Text>
@@ -218,7 +218,7 @@ export function AppointmentDetailsPage({ appointment, onBack }) {
     : appointment?.time || `${appointment?.start_time?.slice(0, 5) || ''} - ${appointment?.end_time?.slice(0, 5) || ''}`;
   return (
     <Page title='Appointment details' onBack={onBack}>
-      <View className={`mb-4 rounded-2xl border-l-4 bg-card p-5 ${isClinic ? 'border-crimson' : 'border-royal'}`}>
+      <View className='mb-4 rounded-2xl border-l-4 border-royal bg-card p-5'>
         <Text className='text-lg font-bold text-ink'>{title}</Text>
         <Text className='mt-3 text-sm text-muted'>{date}</Text>
         <Text className='text-sm text-muted'>{time}</Text>

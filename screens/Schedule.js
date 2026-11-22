@@ -131,8 +131,8 @@ export default function Schedule({ kind, onBack }) {
       </View>
 
       {kind === 'clinic' && (
-        <View className={`mb-4 rounded-2xl border p-4 ${closed ? 'border-[#f0d6d6] bg-[#fff5f5]' : 'border-[#d9eee1] bg-[#f0faf3]'}`}>
-          <Text className={`text-sm font-semibold ${closed ? 'text-[#a34040]' : 'text-[#287a4b]'}`}>
+        <View className={`mb-4 rounded-2xl border p-4 ${closed ? 'border-[#f0d6d6] bg-[#fff5f5]' : 'border-[#d8e6f8] bg-[#edf4ff]'}`}>
+          <Text className={`text-sm font-semibold ${closed ? 'text-[#a34040]' : 'text-[#173b70]'}`}>
             {closed ? 'Clinic is closed on this day' : `Nurse on duty: ${nurse}`}
           </Text>
           <Text className='mt-1 text-xs text-muted'>{closed ? 'Please choose a weekday to see available appointments.' : 'Clinic appointments are available from 8:00 AM to 4:00 PM.'}</Text>

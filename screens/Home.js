@@ -8,7 +8,7 @@ const BANNER_ASPECT_RATIO = 1369 / 257;
 const SERVICES = [
   { id: 'documents', icon: 'document', title: 'Document Request', description: 'Request barangay documents', accent: '#2D5FA5', tint: '#E0ECFF' },
   { id: 'court', icon: 'calendar', title: 'Court Schedule', description: 'Book a court date', accent: '#478461', tint: '#E1F5E8' },
-  { id: 'clinic', icon: 'clinic', title: 'Clinic Appointment', description: 'Schedule a clinic visit', accent: '#C74747', tint: '#FCE6E6' },
+  { id: 'clinic', icon: 'clinic', title: 'Clinic Appointment', description: 'Schedule a clinic visit', accent: '#3265A8', tint: '#E0ECFF' },
 ];
 
 export default function Home({ wide, onOpen, onViewRequests }) {
