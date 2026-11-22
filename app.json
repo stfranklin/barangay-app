@@ -22,7 +22,8 @@
       "favicon": "./assets/barangay-official-seal.png"
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-status-bar"
     ]
   }
 }
