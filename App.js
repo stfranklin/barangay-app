@@ -1,6 +1,6 @@
 import './global.css';
 import { useEffect, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from './components/store';
 import Icon from './components/Icon';
@@ -85,11 +85,9 @@ function Main() {
       <View className='flex-1 flex-row bg-canvas'>
         <View className='w-64 border-r border-line bg-crimson p-4'>
           <View className='mb-8 mt-1 flex-row items-center'>
-            <View className='mr-3 h-10 w-10 items-center justify-center rounded-full border-2 border-yellow-400 bg-white'>
-              <Text className='text-lg font-bold text-crimson'>B</Text>
-            </View>
+            <Image source={require('./assets/barangay-official-seal.png')} accessibilityLabel='Barangay Halang official seal' resizeMode='contain' className='mr-3 h-11 w-11' />
             <View>
-              <Text className='text-sm font-bold text-white'>Barangay San Isidro</Text>
+              <Text className='text-sm font-bold text-white'>Barangay Halang</Text>
               <Text className='text-xs text-blue-200'>Community Services</Text>
             </View>
           </View>
@@ -123,9 +121,12 @@ function Main() {
   return (
     <View className='flex-1 bg-canvas'>
       <View className='flex-row items-center justify-between border-b border-line px-5 py-4'>
-        <View>
-          <Text className='text-xs font-semibold tracking-widest text-muted'>BARANGAY SERVICES</Text>
-          <Text className='font-semibold text-ink'>{isAdmin ? 'Administrator' : 'Resident portal'}</Text>
+        <View className='flex-row items-center'>
+          <Image source={require('./assets/barangay-official-seal.png')} accessibilityLabel='Barangay Halang official seal' resizeMode='contain' className='mr-3 h-10 w-10' />
+          <View>
+            <Text className='text-xs font-semibold tracking-widest text-muted'>BARANGAY SERVICES</Text>
+            <Text className='font-semibold text-ink'>{isAdmin ? 'Administrator' : 'Resident portal'}</Text>
+          </View>
         </View>
         <View className='flex-row items-center'>
           <NotificationBell count={unreadCount} onPress={() => go('notifications')} />

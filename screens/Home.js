@@ -3,7 +3,7 @@ import { View, Text, Pressable, ScrollView, Image } from 'react-native';
 import Icon from '../components/Icon';
 import { useApp, STATUSES, REJECTED, statusLabel } from '../components/store';
 
-const barangayBanner = require('../assets/barangay-services-banner.png');
+const barangayBanner = require('../assets/barangay-services-banner-official.png');
 const BANNER_ASPECT_RATIO = 1999 / 357;
 const SERVICES = [
   { id: 'documents', icon: 'document', title: 'Document Request', description: 'Request barangay documents', accent: '#2D5FA5', tint: '#E0ECFF' },
