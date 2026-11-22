@@ -70,7 +70,7 @@ export function AppProvider({ children }) {
     if (isTaken(b.kind, b.date, b.startTime || b.time, b.endTime || b.time)) return false;
     setBookings([{ ...b, id: Date.now() }, ...bookings]);
     notify(b.kind === 'court'
-      ? `${b.title} booked for ${b.date}, ${b.startTime}–${b.endTime}. Total: ₱${b.fee}.`
+      ? `${b.title} booked for ${b.date}, ${b.startTime}–${b.endTime}. Electricity fee: ₱${b.fee}.`
       : `${b.title} booked for ${b.date}, ${b.time}.`);
     return true;
   };

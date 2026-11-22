@@ -85,7 +85,7 @@ function Main() {
       <View className='flex-1 flex-row bg-canvas'>
         <View className='w-64 border-r border-line bg-crimson p-4'>
           <View className='mb-8 mt-1 flex-row items-center'>
-            <Image source={require('./assets/barangay-official-seal.png')} accessibilityLabel='Barangay Halang official seal' resizeMode='contain' className='mr-3 h-11 w-11' />
+            <Image source={require('./assets/barangay-official-seal.png')} accessibilityLabel='Barangay Halang official seal' resizeMode='contain' className='mr-3' style={{ width: 44, height: 44 }} />
             <View>
               <Text className='text-sm font-bold text-white'>Barangay Halang</Text>
               <Text className='text-xs text-blue-200'>Community Services</Text>
@@ -122,7 +122,7 @@ function Main() {
     <View className='flex-1 bg-canvas'>
       <View className='flex-row items-center justify-between border-b border-line px-5 py-4'>
         <View className='flex-row items-center'>
-          <Image source={require('./assets/barangay-official-seal.png')} accessibilityLabel='Barangay Halang official seal' resizeMode='contain' className='mr-3 h-10 w-10' />
+          <Image source={require('./assets/barangay-official-seal.png')} accessibilityLabel='Barangay Halang official seal' resizeMode='contain' className='mr-3' style={{ width: 40, height: 40 }} />
           <View>
             <Text className='text-xs font-semibold tracking-widest text-muted'>BARANGAY SERVICES</Text>
             <Text className='font-semibold text-ink'>{isAdmin ? 'Administrator' : 'Resident portal'}</Text>

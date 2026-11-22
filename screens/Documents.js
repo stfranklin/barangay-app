@@ -7,6 +7,8 @@ const DOCS = [
   { name: 'Barangay Clearance', fee: 'PHP 50', reqs: ['Valid ID', 'Proof of residency', '1x1 photo'] },
   { name: 'Certificate of Residency', fee: 'PHP 30', reqs: ['Valid ID', 'Proof of residency'] },
   { name: 'Certificate of Indigency', fee: 'Free', reqs: ['Valid ID', 'Household record'] },
+  { name: 'Barangay ID', fee: '₱150', reqs: ['Valid ID', 'Proof of residency', '1x1 photo'] },
+  { name: 'Business Permit', fee: '₱100–₱500', reqs: ['Valid ID', 'Proof of business address', 'Business registration documents'] },
 ];
 
 function Field({ label, value, onChangeText, placeholder, keyboardType }) {

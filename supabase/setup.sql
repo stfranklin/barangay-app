@@ -27,7 +27,7 @@ create table bookings (
   start_time time, end_time time, hours int, fee int,
   status text not null default 'Pending',
   created_at timestamptz default now(),
-  constraint court_booking_fee_check check (kind <> 'court' or (start_time is not null and end_time > start_time and hours > 0 and hours = extract(epoch from (end_time - start_time)) / 3600 and fee = hours * 100)),
+  constraint court_booking_fee_check check (kind <> 'court' or (start_time is not null and end_time > start_time and hours > 0 and hours = extract(epoch from (end_time - start_time)) / 3600 and fee = greatest(0, extract(epoch from (end_time - greatest(start_time, time '18:00'))) / 3600)::int * 100)),
   constraint court_bookings_no_overlap exclude using gist (kind with =, date with =, (tsrange(date + start_time, date + end_time)) with &&) where (kind = 'court'),
   constraint clinic_booking_time_check check (kind <> 'clinic' or (service is not null and nurse is not null and start_time >= time '08:00' and end_time <= time '16:00' and end_time - start_time = interval '1 hour' and extract(isodow from date) between 1 and 5)),
   constraint clinic_nurse_no_overlap exclude using gist (kind with =, date with =, nurse with =, (tsrange(date + start_time, date + end_time)) with &&) where (kind = 'clinic'),

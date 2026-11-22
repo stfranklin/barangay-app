@@ -4,7 +4,7 @@ import Icon from '../components/Icon';
 import { useApp, STATUSES, REJECTED, statusLabel } from '../components/store';
 
 const barangayBanner = require('../assets/barangay-services-banner-official.png');
-const BANNER_ASPECT_RATIO = 1999 / 357;
+const BANNER_ASPECT_RATIO = 1369 / 257;
 const SERVICES = [
   { id: 'documents', icon: 'document', title: 'Document Request', description: 'Request barangay documents', accent: '#2D5FA5', tint: '#E0ECFF' },
   { id: 'court', icon: 'calendar', title: 'Court Schedule', description: 'Book a court date', accent: '#478461', tint: '#E1F5E8' },

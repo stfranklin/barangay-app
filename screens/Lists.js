@@ -86,7 +86,7 @@ export function MyAppointments({ onBack, onSelect }) {
         >
           <Text className='font-bold text-ink'>{b.service || b.title || 'Clinic appointment'}</Text>
           <Text className='text-muted'>{b.date} | {b.kind === 'court' ? `${b.startTime} - ${b.endTime}` : `at ${b.time}`}</Text>
-          {b.kind === 'court' && <Text className='text-muted'>{b.hours} hour{b.hours === 1 ? '' : 's'} | PHP {b.fee}</Text>}
+          {b.kind === 'court' && <Text className='text-muted'>{b.hours} hour{b.hours === 1 ? '' : 's'} | Electricity fee ₱{b.fee}</Text>}
           {b.nurse && <Text className='text-muted'>{b.nurse}</Text>}
           {b.kind === 'clinic' && <Text className='mt-1 font-semibold text-royal'>{b.status || 'Pending'}</Text>}
           <Text className='mt-2 text-xs font-semibold text-muted'>View details</Text>
