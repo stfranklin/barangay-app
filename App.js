@@ -1,6 +1,6 @@
 import './global.css';
 import { useEffect, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from './components/store';
 import Icon from './components/Icon';
@@ -33,9 +33,9 @@ function NotificationBell({ count, onPress }) {
       onPress={onPress}
       className='mr-3 h-10 w-10 items-center justify-center rounded-xl border border-line'
     >
-      <Icon name='bell' color='#F3F4F6' size={20} />
+      <Icon name='bell' color='#173B70' size={20} />
       {count > 0 && (
-        <View className='absolute -right-1 -top-1 min-h-4 min-w-4 items-center justify-center rounded-full border-2 border-ink bg-crimson px-1'>
+        <View className='absolute -right-1 -top-1 min-h-4 min-w-4 items-center justify-center rounded-full border-2 border-canvas bg-crimson px-1'>
           <Text className='text-[9px] font-bold text-white'>{count > 9 ? '9+' : count}</Text>
         </View>
       )}
@@ -68,7 +68,13 @@ function Main() {
   else if (svc === 'clinic') body = <ClinicFlow key={svc} onBack={() => setSvc(null)} />;
   else if (svc) body = <Schedule key={svc} kind={svc} onBack={() => setSvc(null)} />;
   else if (tab === 'dashboard' && isAdmin) body = <AdminDashboard />;
-  else if (tab === 'home') body = <Home wide={wide} onOpen={setSvc} />;
+  else if (tab === 'home') body = (
+    <Home
+      wide={wide}
+      onOpen={setSvc}
+      onViewRequests={() => go('requests')}
+    />
+  );
   else if (tab === 'requests') body = <MyRequests onBack={back} />;
   else if (tab === 'appointments' && selectedAppointment) body = <AppointmentDetailsPage appointment={selectedAppointment} onBack={() => setSelectedAppointment(null)} />;
   else if (tab === 'appointments') body = <MyAppointments onBack={back} onSelect={setSelectedAppointment} />;
@@ -77,16 +83,19 @@ function Main() {
 
   if (wide)
     return (
-      <View className='flex-1 flex-row bg-ink'>
-        <View className='w-64 border-r border-line p-4'>
-          <View className='mb-8 mt-2 border-l-4 border-crimson pl-3'>
-            <Text className='text-xs font-semibold tracking-widest text-muted'>BARANGAY</Text>
-            <Text className='text-lg font-bold text-white'>Services Portal</Text>
+      <View className='flex-1 flex-row bg-canvas'>
+        <View className='w-64 border-r border-line bg-crimson p-4'>
+          <View className='mb-8 mt-1 flex-row items-center'>
+            <Image source={require('./assets/barangay-official-seal.png')} accessibilityLabel='Barangay Halang official seal' resizeMode='contain' className='mr-3' style={{ width: 44, height: 44 }} />
+            <View>
+              <Text className='text-sm font-bold text-white'>Barangay Halang</Text>
+              <Text className='text-xs text-blue-200'>Community Services</Text>
+            </View>
           </View>
           {sidebar.map(([id, label, icon]) => (
-            <Pressable key={id} onPress={() => go(id)} className={`mb-1 flex-row items-center rounded-xl px-3 py-3 ${!svc && tab === id ? 'bg-card' : ''}`}>
-              <View className={`mr-3 h-9 w-9 items-center justify-center rounded-lg ${!svc && tab === id ? 'bg-crimson' : 'bg-line'}`}>
-                <Icon name={icon} color='#F3F4F6' size={19} />
+            <Pressable key={id} onPress={() => go(id)} className={`mb-1 flex-row items-center rounded-xl px-3 py-3 ${!svc && tab === id ? 'bg-royal' : ''}`}>
+              <View className='mr-3 h-9 w-9 items-center justify-center rounded-lg'>
+                <Icon name={icon} color='#FFFFFF' size={19} />
               </View>
               <Text className='text-white'>{label}</Text>
             </Pressable>
@@ -94,7 +103,7 @@ function Main() {
         </View>
         <View className='flex-1'>
           <View className='flex-row items-center justify-between border-b border-line px-6 py-4'>
-            <Text className='font-semibold text-white'>{isAdmin ? 'Administrator workspace' : 'Resident services'}</Text>
+            <Text className='font-semibold text-ink'>{isAdmin ? 'Administrator workspace' : 'Resident services'}</Text>
             <View className='flex-row items-center'>
               <NotificationBell count={unreadCount} onPress={() => go('notifications')} />
               <Text className='text-sm text-muted'>{profile?.full_name || (isAdmin ? 'Administrator' : 'Resident')}</Text>
@@ -111,27 +120,30 @@ function Main() {
 
   const active = tab === 'requests' || tab === 'appointments' ? 'profile' : tab;
   return (
-    <View className='flex-1 bg-ink'>
+    <View className='flex-1 bg-canvas'>
       <View className='flex-row items-center justify-between border-b border-line px-5 py-4'>
-        <View>
-          <Text className='text-xs font-semibold tracking-widest text-muted'>BARANGAY SERVICES</Text>
-          <Text className='font-semibold text-white'>{isAdmin ? 'Administrator' : 'Resident portal'}</Text>
+        <View className='flex-row items-center'>
+          <Image source={require('./assets/barangay-official-seal.png')} accessibilityLabel='Barangay Halang official seal' resizeMode='contain' className='mr-3' style={{ width: 40, height: 40 }} />
+          <View>
+            <Text className='text-xs font-semibold tracking-widest text-muted'>BARANGAY SERVICES</Text>
+            <Text className='font-semibold text-ink'>{isAdmin ? 'Administrator' : 'Resident portal'}</Text>
+          </View>
         </View>
         <View className='flex-row items-center'>
           <NotificationBell count={unreadCount} onPress={() => go('notifications')} />
           <Pressable onPress={() => go('profile')} className='rounded-lg border border-line px-3 py-2'>
-            <Text className='text-xs font-semibold text-white'>{profile?.full_name?.split(' ').map((part) => part[0]).join('').slice(0, 2) || 'ME'}</Text>
+            <Text className='text-xs font-semibold text-ink'>{profile?.full_name?.split(' ').map((part) => part[0]).join('').slice(0, 2) || 'ME'}</Text>
           </Pressable>
         </View>
       </View>
       {body}
-      <View className='flex-row border-t border-line bg-ink'>
+      <View className='flex-row border-t border-line bg-canvas'>
         {tabs.map(([id, label, icon]) => (
           <Pressable key={id} onPress={() => go(id)} className='flex-1 items-center py-2'>
             <View className={`mb-1 h-9 w-9 items-center justify-center rounded-lg ${!svc && active === id ? 'bg-crimson' : 'bg-line'}`}>
-              <Icon name={icon} color='#F3F4F6' size={19} />
+              <Icon name={icon} color={!svc && active === id ? '#FFFFFF' : '#173B70'} size={19} />
             </View>
-            <Text className={`text-[10px] ${!svc && active === id ? 'font-bold text-white' : 'text-muted'}`}>{label}</Text>
+            <Text className={`text-[10px] ${!svc && active === id ? 'font-bold text-crimson' : 'text-muted'}`}>{label}</Text>
           </Pressable>
         ))}
       </View>
@@ -141,7 +153,7 @@ function Main() {
 
 function Gate() {
   const { session, profile, loading } = useAuth();
-  if (loading) return <View className='flex-1 items-center justify-center bg-ink'><ActivityIndicator color='#D91E2A' /></View>;
+  if (loading) return <View className='flex-1 items-center justify-center bg-canvas'><ActivityIndicator color='#D91E2A' /></View>;
   if (!session) return <Auth />;
   if (profile?.status && profile.status !== 'approved') return <Verify />;
   return <Main />;
@@ -150,7 +162,7 @@ function Gate() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <SafeAreaView className='flex-1 bg-ink'>
+      <SafeAreaView className='flex-1 bg-canvas'>
         <AuthProvider>
           <AppProvider>
             <Gate />

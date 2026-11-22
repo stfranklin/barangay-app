@@ -145,12 +145,12 @@ export default function AdminDashboard() {
       <Text className='-mt-3 mb-5 text-muted'>Manage resident access and review service activity.</Text>
       <View className='mb-6 rounded-2xl border border-line bg-card p-5'>
         <Text className='text-xs font-semibold tracking-widest text-muted'>RESIDENT ACCOUNTS</Text>
-        <Text className='mt-1 text-3xl font-bold text-white'>{loading ? '...' : residents.length}</Text>
+        <Text className='mt-1 text-3xl font-bold text-ink'>{loading ? '...' : residents.length}</Text>
         <Text className='mt-1 text-sm text-muted'>Accounts managed by the barangay</Text>
       </View>
 
       <View className='mb-6 rounded-2xl border border-line bg-card p-5'>
-        <Text className='text-lg font-bold text-white'>Create resident account</Text>
+        <Text className='text-lg font-bold text-ink'>Create resident account</Text>
         <Text className='mb-4 mt-1 text-sm text-muted'>Add the resident details and set an initial password.</Text>
         <Field label='Full name' value={form.full_name} onChangeText={set('full_name')} placeholder='Juan Dela Cruz' />
         <Field label='Email address' value={form.email} onChangeText={set('email')} placeholder='resident@example.com' keyboardType='email-address' />
@@ -163,7 +163,7 @@ export default function AdminDashboard() {
       </View>
 
       <View className='mb-2 flex-row items-center justify-between'>
-        <Text className='text-lg font-bold text-white'>Resident accounts</Text>
+        <Text className='text-lg font-bold text-ink'>Resident accounts</Text>
         <Pressable onPress={loadResidents} accessibilityRole='button'>
           <Text className='text-sm font-semibold text-crimson'>Refresh</Text>
         </Pressable>
@@ -172,7 +172,7 @@ export default function AdminDashboard() {
       {!loading && residents.length === 0 ? <Text className='py-4 text-muted'>No resident accounts yet.</Text> : null}
       {residents.map((resident) => (
         <View key={resident.id} className='mb-2 rounded-xl border border-line bg-card p-4'>
-          <Text className='font-semibold text-white'>{resident.full_name || 'Resident'}</Text>
+          <Text className='font-semibold text-ink'>{resident.full_name || 'Resident'}</Text>
           {resident.email ? <Text className='mt-1 text-sm text-muted'>{resident.email}</Text> : null}
           <Text className='mt-1 text-sm text-muted'>{resident.address || 'No address on file'}</Text>
           {resident.contact ? <Text className='text-sm text-muted'>{resident.contact}</Text> : null}
@@ -180,7 +180,7 @@ export default function AdminDashboard() {
       ))}
 
       <View className='mb-2 mt-8 flex-row items-center justify-between'>
-        <Text className='text-lg font-bold text-white'>Account approvals ({pending.length})</Text>
+        <Text className='text-lg font-bold text-ink'>Account approvals ({pending.length})</Text>
         <Pressable onPress={loadPending} accessibilityRole='button'>
           <Text className='text-sm font-semibold text-crimson'>Refresh</Text>
         </Pressable>
@@ -190,7 +190,7 @@ export default function AdminDashboard() {
       {!pendLoading && !pendError && pending.length === 0 ? <Text className='py-3 text-muted'>No accounts are waiting for approval.</Text> : null}
       {pending.map((p) => (
         <View key={p.id} className='mb-3 rounded-2xl border border-line bg-card p-4'>
-          <Text className='font-semibold text-white'>{p.full_name}</Text>
+          <Text className='font-semibold text-ink'>{p.full_name}</Text>
           <Text className='mt-1 text-sm text-muted'>{p.email} | {p.contact}</Text>
           <Text className='text-sm text-muted'>{p.address}</Text>
           {p.id_path ? (
@@ -207,7 +207,7 @@ export default function AdminDashboard() {
       ))}
 
       <View className='mb-2 mt-8 flex-row items-center justify-between'>
-        <Text className='text-lg font-bold text-white'>Document requests</Text>
+        <Text className='text-lg font-bold text-ink'>Document requests</Text>
         <Pressable onPress={loadDocRequests} accessibilityRole='button'>
           <Text className='text-sm font-semibold text-crimson'>Refresh</Text>
         </Pressable>
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
       {!docsLoading && !docsError && docRequests.length === 0 ? <Text className='py-3 text-muted'>No document requests.</Text> : null}
       {docRequests.map((r) => (
         <View key={r.id} className='mb-3 rounded-2xl border border-line bg-card p-4'>
-          <Text className='font-semibold text-white'>{r.doc} | {r.ref}</Text>
+          <Text className='font-semibold text-ink'>{r.doc} | {r.ref}</Text>
           <Text className='mt-1 text-sm text-muted'>{r.name} | {r.contact}</Text>
           <Text className='text-sm text-muted'>{r.address}</Text>
           <Text className='text-sm text-muted'>Purpose: {r.purpose} | {r.date}</Text>
@@ -232,7 +232,7 @@ export default function AdminDashboard() {
       ))}
 
       <View className='mb-2 mt-8 flex-row items-center justify-between'>
-        <Text className='text-lg font-bold text-white'>Clinic appointment requests</Text>
+        <Text className='text-lg font-bold text-ink'>Clinic appointment requests</Text>
         <Pressable onPress={loadClinicAppointments} accessibilityRole='button'>
           <Text className='text-sm font-semibold text-crimson'>Refresh</Text>
         </Pressable>
@@ -242,7 +242,7 @@ export default function AdminDashboard() {
       {!appointmentsLoading && !appointmentsError && clinicAppointments.length === 0 ? <Text className='py-3 text-muted'>No clinic appointment requests.</Text> : null}
       {clinicAppointments.map((appointment) => (
         <View key={appointment.id} className='mb-3 rounded-2xl border border-line bg-card p-4'>
-          <Text className='font-semibold text-white'>{appointment.service}</Text>
+          <Text className='font-semibold text-ink'>{appointment.service}</Text>
           <Text className='mt-1 text-sm text-muted'>{appointment.residentName}</Text>
           <Text className='text-sm text-muted'>{appointment.date} | {appointment.time}</Text>
           <Text className='text-sm text-muted'>{appointment.nurse}</Text>
