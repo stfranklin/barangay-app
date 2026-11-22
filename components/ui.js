@@ -26,7 +26,7 @@ export function Field({ label, value, onChangeText, placeholder, keyboardType, s
         keyboardType={keyboardType}
         secureTextEntry={secure}
         autoCapitalize='none'
-        className='rounded-xl border border-line bg-card px-3 py-3 text-white'
+        className='rounded-xl border border-line bg-card px-3 py-3 text-ink'
       />
     </View>
   );
@@ -41,7 +41,7 @@ export function Page({ title, onBack, children }) {
             <Text className='mb-2 text-crimson'>Back</Text>
           </Pressable>
         )}
-        <Text className='mb-4 text-2xl font-bold text-white'>{title}</Text>
+        <Text className='mb-4 text-2xl font-bold text-ink'>{title}</Text>
         {children}
       </View>
     </ScrollView>

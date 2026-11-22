@@ -4,7 +4,7 @@
     "slug": "barangay-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/barangay-official-seal.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
@@ -12,14 +12,14 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
+        "foregroundImage": "./assets/barangay-official-seal.png",
         "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "monochromeImage": "./assets/barangay-official-seal.png"
       }
     },
     "web": {
       "bundler": "metro",
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/barangay-official-seal.png"
     },
     "plugins": [
       "expo-sqlite"

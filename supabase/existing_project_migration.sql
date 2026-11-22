@@ -1,7 +1,7 @@
 -- Run in Supabase SQL Editor for an existing project.
 create extension if not exists btree_gist;
 
--- Court reservations use hourly intervals and PHP 100 per hour.
+-- Court rental is free before 6:00 PM; electricity after 6:00 PM costs PHP 100 per hour.
 alter table public.bookings add column if not exists start_time time;
 alter table public.bookings add column if not exists end_time time;
 alter table public.bookings add column if not exists hours int;
@@ -12,20 +12,15 @@ alter table public.bookings add column if not exists status text not null defaul
 -- Replace the old global same-time constraint with nurse/resident interval checks.
 alter table public.bookings drop constraint if exists bookings_kind_date_time_key;
 
-do $$ begin
-  if not exists (
-    select 1 from pg_constraint
-    where conname = 'court_booking_fee_check'
-      and conrelid = 'public.bookings'::regclass
-  ) then
-    alter table public.bookings add constraint court_booking_fee_check
-      check (kind <> 'court' or (
-        start_time is not null and end_time > start_time and hours > 0
-        and hours = extract(epoch from (end_time - start_time)) / 3600
-        and fee = hours * 100
-      )) not valid;
-  end if;
+alter table public.bookings drop constraint if exists court_booking_fee_check;
+alter table public.bookings add constraint court_booking_fee_check
+  check (kind <> 'court' or (
+    start_time is not null and end_time > start_time and hours > 0
+    and hours = extract(epoch from (end_time - start_time)) / 3600
+    and fee = greatest(0, extract(epoch from (end_time - greatest(start_time, time '18:00'))) / 3600)::int * 100
+  )) not valid;
 
+do $$ begin
   if not exists (
     select 1 from pg_constraint
     where conname = 'court_bookings_no_overlap'

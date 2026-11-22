@@ -7,6 +7,8 @@ const DOCS = [
   { name: 'Barangay Clearance', fee: 'PHP 50', reqs: ['Valid ID', 'Proof of residency', '1x1 photo'] },
   { name: 'Certificate of Residency', fee: 'PHP 30', reqs: ['Valid ID', 'Proof of residency'] },
   { name: 'Certificate of Indigency', fee: 'Free', reqs: ['Valid ID', 'Household record'] },
+  { name: 'Barangay ID', fee: '₱150', reqs: ['Valid ID', 'Proof of residency', '1x1 photo'] },
+  { name: 'Business Permit', fee: '₱100–₱500', reqs: ['Valid ID', 'Proof of business address', 'Business registration documents'] },
 ];
 
 function Field({ label, value, onChangeText, placeholder, keyboardType }) {
@@ -19,7 +21,7 @@ function Field({ label, value, onChangeText, placeholder, keyboardType }) {
         placeholder={placeholder}
         placeholderTextColor='#6B7280'
         keyboardType={keyboardType}
-        className='rounded-xl border border-line bg-card px-3 py-3 text-white'
+        className='rounded-xl border border-line bg-card px-3 py-3 text-ink'
       />
     </View>
   );
@@ -41,7 +43,7 @@ export default function Documents({ onBack }) {
         <View className='rounded-2xl border-l-4 border-crimson bg-card p-5'>
           <Text className='text-xs font-semibold uppercase tracking-widest text-green-400'>Request received</Text>
           <Text className='mt-2 text-muted'>Reference number</Text>
-          <Text className='text-3xl font-bold text-white'>{done.ref}</Text>
+          <Text className='text-3xl font-bold text-ink'>{done.ref}</Text>
           <Text className='mt-2 text-muted'>{done.doc} | Status: Pending</Text>
           <Text className='mt-2 text-muted'>Track it under My Requests. Bring a valid ID when claiming.</Text>
         </View>
@@ -53,7 +55,7 @@ export default function Documents({ onBack }) {
     return (
       <Page title={doc.name} onBack={() => setDoc(null)}>
         <View className='mb-4 rounded-2xl bg-card p-4'>
-          <Text className='font-semibold text-white'>Fee: {doc.fee}</Text>
+          <Text className='font-semibold text-ink'>Fee: {doc.fee}</Text>
           <Text className='mt-1 text-muted'>Requirements: {doc.reqs.join(', ')}</Text>
         </View>
         <Field label='Full name' value={f.name} onChangeText={set('name')} placeholder='Juan Dela Cruz' />
@@ -84,7 +86,7 @@ export default function Documents({ onBack }) {
           className='mb-3 flex-row items-center rounded-2xl border-l-4 border-crimson bg-card p-4 active:opacity-80'
         >
           <View className='flex-1'>
-            <Text className='text-base font-semibold text-white'>{d.name}</Text>
+            <Text className='text-base font-semibold text-ink'>{d.name}</Text>
             <Text className='text-sm text-muted'>Fee: {d.fee}</Text>
           </View>
           <Text className='text-xs font-semibold text-muted'>Select</Text>
