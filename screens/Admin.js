@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Linking } from 'react-native';
 import { Btn, Field, Page } from '../components/ui';
 import { useAuth } from '../components/auth';
 import { clinicBookingError } from '../components/bookingErrors';
@@ -24,6 +24,11 @@ export default function AdminDashboard() {
   const [docsLoading, setDocsLoading] = useState(true);
   const [docsError, setDocsError] = useState('');
   const [docBusy, setDocBusy] = useState(null);
+  const [pending, setPending] = useState([]);
+  const [pendLoading, setPendLoading] = useState(true);
+  const [pendError, setPendError] = useState('');
+  const [pendBusy, setPendBusy] = useState(null);
+  const [reasons, setReasons] = useState({});
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const set = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
@@ -71,7 +76,31 @@ export default function AdminDashboard() {
     setDocsLoading(false);
   }, []);
 
-  useEffect(() => { loadResidents(); loadClinicAppointments(); loadDocRequests(); }, [loadResidents, loadClinicAppointments, loadDocRequests]);
+  const loadPending = useCallback(async () => {
+    setPendLoading(true);
+    const { data, error: queryError } = await supabase.from('profiles')
+      .select('id, full_name, email, address, contact, id_path, created_at')
+      .eq('role', 'resident').eq('status', 'pending').order('created_at', { ascending: true });
+    setPendError(queryError?.message || '');
+    setPending(data || []);
+    setPendLoading(false);
+  }, []);
+
+  useEffect(() => { loadResidents(); loadClinicAppointments(); loadDocRequests(); loadPending(); }, [loadResidents, loadClinicAppointments, loadDocRequests, loadPending]);
+
+  const viewId = async (p) => {
+    const { data, error: urlError } = await supabase.storage.from('ids').createSignedUrl(p.id_path, 120);
+    if (urlError) setPendError(urlError.message); else Linking.openURL(data.signedUrl);
+  };
+
+  const reviewAccount = async (p, status) => {
+    if (status === 'rejected' && !(reasons[p.id] || '').trim()) { setPendError('Type a reason before rejecting.'); return; }
+    setPendBusy(p.id);
+    setPendError('');
+    const { error: reviewError } = await supabase.rpc('review_account', { p_id: p.id, p_status: status, p_reason: reasons[p.id] || null });
+    if (reviewError) setPendError(reviewError.message); else await loadPending();
+    setPendBusy(null);
+  };
 
   const setDocStatus = async (req, status) => {
     setDocBusy(req.id);
@@ -147,6 +176,33 @@ export default function AdminDashboard() {
           {resident.email ? <Text className='mt-1 text-sm text-muted'>{resident.email}</Text> : null}
           <Text className='mt-1 text-sm text-muted'>{resident.address || 'No address on file'}</Text>
           {resident.contact ? <Text className='text-sm text-muted'>{resident.contact}</Text> : null}
+        </View>
+      ))}
+
+      <View className='mb-2 mt-8 flex-row items-center justify-between'>
+        <Text className='text-lg font-bold text-white'>Account approvals ({pending.length})</Text>
+        <Pressable onPress={loadPending} accessibilityRole='button'>
+          <Text className='text-sm font-semibold text-crimson'>Refresh</Text>
+        </Pressable>
+      </View>
+      {pendLoading ? <Text className='py-3 text-muted'>Loading accounts...</Text> : null}
+      {pendError ? <Text className='py-3 text-crimson'>{pendError}</Text> : null}
+      {!pendLoading && !pendError && pending.length === 0 ? <Text className='py-3 text-muted'>No accounts are waiting for approval.</Text> : null}
+      {pending.map((p) => (
+        <View key={p.id} className='mb-3 rounded-2xl border border-line bg-card p-4'>
+          <Text className='font-semibold text-white'>{p.full_name}</Text>
+          <Text className='mt-1 text-sm text-muted'>{p.email} | {p.contact}</Text>
+          <Text className='text-sm text-muted'>{p.address}</Text>
+          {p.id_path ? (
+            <Btn outline label='View ID' onPress={() => viewId(p)} />
+          ) : (
+            <Text className='mt-2 text-sm text-royal'>Has not uploaded an ID yet.</Text>
+          )}
+          <Field label='Reason (required to reject)' value={reasons[p.id] || ''} onChangeText={(v) => setReasons((r) => ({ ...r, [p.id]: v }))} />
+          <View className='flex-row gap-2'>
+            <View className='flex-1'><Btn label={pendBusy === p.id ? 'Saving...' : 'Approve'} disabled={!p.id_path || pendBusy !== null} onPress={() => reviewAccount(p, 'approved')} /></View>
+            <View className='flex-1'><Btn outline label='Reject' disabled={pendBusy !== null} onPress={() => reviewAccount(p, 'rejected')} /></View>
+          </View>
         </View>
       ))}
 

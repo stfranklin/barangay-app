@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, address, contact, role, active, created_at')
+        .select('id, full_name, email, address, contact, role, active, status, reject_reason, id_path, created_at')
         .eq('id', uid)
         .maybeSingle();
       if (requestId !== profileRequest.current) return;
@@ -88,6 +88,34 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) =>
     (await supabase.auth.signInWithPassword({ email, password })).error?.message || null;
 
+  const signUp = async (fields) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: fields.email,
+      password: fields.password,
+      options: { data: { full_name: fields.name, address: fields.address, contact: fields.contact } },
+    });
+    return { error: error?.message || null, needsConfirm: !error && !data.session };
+  };
+
+  // Uploads the ID to the private bucket, then marks the account as waiting for review.
+  const submitId = async (file) => {
+    const userId = session.user.id;
+    const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${userId}/${Date.now()}.${ext}`;
+    try {
+      const body = await (await fetch(file.uri)).arrayBuffer();
+      const { error: uploadError } = await supabase.storage.from('ids').upload(path, body, { contentType: file.mimeType || 'image/jpeg' });
+      if (uploadError) return uploadError.message;
+    } catch (error) {
+      return error?.message || 'Could not read the selected file.';
+    }
+    const { error } = await supabase.rpc('submit_id', { p_path: path });
+    if (!error) await loadProfile(userId);
+    return error?.message || null;
+  };
+
+  const refreshProfile = () => (session ? loadProfile(session.user.id) : null);
+
   const createResident = async (resident) => {
     const { data, error } = await supabase.functions.invoke('create-resident', { body: resident });
     if (!error) return { error: data?.error || null };
@@ -116,7 +144,7 @@ export function AuthProvider({ children }) {
   const signOut = () => supabase.auth.signOut();
 
   return (
-    <Ctx.Provider value={{ session, profile, loading, signIn, createResident, resetPassword, updateProfile, updatePassword, signOut }}>
+    <Ctx.Provider value={{ session, profile, loading, signIn, signUp, submitId, refreshProfile, createResident, resetPassword, updateProfile, updatePassword, signOut }}>
       {children}
     </Ctx.Provider>
   );

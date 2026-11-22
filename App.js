@@ -6,6 +6,7 @@ import { AppProvider, useApp } from './components/store';
 import Icon from './components/Icon';
 import { AuthProvider, useAuth } from './components/auth';
 import Auth from './screens/Auth';
+import Verify from './screens/Verify';
 import Home from './screens/Home';
 import AdminDashboard from './screens/Admin';
 import Documents from './screens/Documents';
@@ -139,9 +140,11 @@ function Main() {
 }
 
 function Gate() {
-  const { session, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
   if (loading) return <View className='flex-1 items-center justify-center bg-ink'><ActivityIndicator color='#D91E2A' /></View>;
-  return session ? <Main /> : <Auth />;
+  if (!session) return <Auth />;
+  if (profile?.status && profile.status !== 'approved') return <Verify />;
+  return <Main />;
 }
 
 export default function App() {
