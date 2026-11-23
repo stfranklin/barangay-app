@@ -1,13 +1,13 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { Btn, Page } from '../components/ui';
 import { useApp } from '../components/store';
+import MonthCalendar from '../components/MonthCalendar';
 
 const SLOTS = ['8:00 AM', '9:00 AM', '10:00 AM', '1:00 PM', '2:00 PM', '3:00 PM'];
 const COURT_HOURS = Array.from({ length: 13 }, (_, i) => 8 * 60 + i * 60);
 const COURT_RATE = 100;
 const COURT_ELECTRICITY_START = 18 * 60;
-const SEEDED = { clinic: ['10:00 AM'] };
 const NURSES = ['Nurse Ana', 'Nurse Liza', 'Nurse Mae'];
 const MAX_SLOTS_PER_DAY = 6;
 const CFG = {
@@ -28,23 +28,12 @@ const formatTime = (minutes) => {
   return `${hour % 12 || 12}:00 ${hour < 12 ? 'AM' : 'PM'}`;
 };
 
-function DateAvailabilityBadge({ available, fullyBooked }) {
-  if (fullyBooked) {
-    return (
-      <View className='absolute -top-1 -right-1 rounded-full bg-[#98a4b4] px-1.5 py-0.5'>
-        <Text className='text-[10px] font-bold text-white'>Fully Booked</Text>
-      </View>
-    );
-  }
-  if (available) {
-    return (
-      <View className='absolute -top-1 -right-1 rounded-full bg-[#287a4b] px-1.5 py-0.5'>
-        <Text className='text-[10px] font-bold text-white'>Nurse Available</Text>
-      </View>
-    );
-  }
-  return null;
-}
+// Check if a given date is in the past
+const isPast = (d, today) => {
+  const checkDate = new Date(d);
+  checkDate.setHours(0, 0, 0, 0);
+  return checkDate < today;
+};
 
 export default function Schedule({ kind, onBack }) {
   const { isTaken, addBooking } = useApp();
@@ -63,56 +52,19 @@ export default function Schedule({ kind, onBack }) {
   const [done, setDone] = useState(null);
   const [err, setErr] = useState('');
 
-  // Month & Year details
-  const currentMonth = currentDate.getMonth();
-  const currentYear = currentDate.getFullYear();
-
-  // Generate days for the current month view
-  const daysInMonth = useMemo(() => {
-    const year = currentYear;
-    const month = currentMonth;
-    const totalDays = new Date(year, month + 1, 0).getDate();
-    const result = [];
-    for (let day = 1; day <= totalDays; day++) {
-      result.push(new Date(year, month, day));
-    }
-    return result;
-  }, [currentYear, currentMonth]);
-
-  // Navigate to previous month
-  const prevMonth = useCallback(() => {
-    setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-  }, []);
-
-  // Navigate to next month
-  const nextMonth = useCallback(() => {
-    setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-  }, []);
-
-  // Check if a given date is in the past
-  const isPast = useCallback((d) => {
-    const checkDate = new Date(d);
-    checkDate.setHours(0, 0, 0, 0);
-    return checkDate < today;
-  }, [today]);
-
   const dateKey = selectedDate.toDateString();
   const closed = kind === 'clinic' && (selectedDate.getDay() === 0 || selectedDate.getDay() === 6);
   const nurse = NURSES[selectedDate.getDay() % 3];
   const courtBusy = (start, end) => isTaken('court', dateKey, start, end);
-  const taken = (t) => SEEDED.clinic.includes(t) || isTaken(kind, dateKey, t);
 
-  // Dynamic status of dates in the current month view
-  const dateAvailability = useMemo(() => {
-    if (kind !== 'clinic') return [];
-    return daysInMonth.map((x) => {
-      const xKey = x.toDateString();
-      const isClinicClosed = x.getDay() === 0 || x.getDay() === 6;
-      if (isClinicClosed) return null;
-      const bookedCount = SLOTS.filter((slot) => isTaken('clinic', xKey, slot)).length;
-      return bookedCount >= MAX_SLOTS_PER_DAY ? 'fully-booked' : 'available';
-    });
-  }, [kind, isTaken, daysInMonth]);
+  // For court: no availability markers shown in calendar
+  const getTimeStatus = useCallback((d) => {
+    if (kind === 'court') return null;
+    const dayOfWeek = d.getDay();
+    // Weekend closure
+    if (dayOfWeek === 0 || dayOfWeek === 6) return 'closed';
+    return null; // Let the date button handling take care of availability display
+  }, [kind]);
 
   const courtStartOptions = COURT_HOURS.slice(0, -1).filter((start) =>
     !courtBusy(formatTime(start), formatTime(start + 60))
@@ -160,10 +112,8 @@ export default function Schedule({ kind, onBack }) {
       </Page>
     );
 
-  const isSelectedDatePast = isPast(selectedDate);
+  const isSelectedDatePast = isPast(selectedDate, today);
   const bookingDisabled = isSelectedDatePast || (kind === 'court' ? !time || !endTime : !time || closed);
-
-  const monthYearLabel = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
     <Page title={cfg.title} onBack={onBack}>
@@ -172,107 +122,18 @@ export default function Schedule({ kind, onBack }) {
         <Text className='mt-1 text-sm leading-5 text-[#526984]'>{cfg.note}</Text>
       </View>
 
-      <View className='mb-4 rounded-2xl border border-line bg-white p-4'>
-        {/* Month Navigation Controls */}
-        <View className='mb-3 flex-row items-center justify-between'>
-          <View>
-            <Text className='font-bold text-ink'>Choose a date</Text>
-            <Text className='mt-0.5 text-xs text-muted'>{monthYearLabel}</Text>
-          </View>
-          <View className='flex-row items-center gap-1'>
-            <Pressable
-              accessibilityRole='button'
-              accessibilityLabel='Previous Month'
-              onPress={prevMonth}
-              className='h-8 w-8 items-center justify-center rounded-xl bg-[#f3f7fc] border border-[#dce8f5] active:bg-[#e7f0fa]'
-            >
-              <Text className='text-base font-bold text-[#173b70]'>‹</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole='button'
-              accessibilityLabel='Next Month'
-              onPress={nextMonth}
-              className='h-8 w-8 items-center justify-center rounded-xl bg-[#f3f7fc] border border-[#dce8f5] active:bg-[#e7f0fa]'
-            >
-              <Text className='text-base font-bold text-[#173b70]'>›</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {kind === 'clinic' && dateAvailability.length > 0 && (
-          <View className='mb-3 rounded-lg bg-[#f8fafd] p-3'>
-            <Text className='text-xs font-medium text-muted'>Availability Status ({monthYearLabel})</Text>
-            <View className='mt-2 flex-row items-center justify-between rounded-lg border border-[#dce6f2] bg-white px-3 py-2'>
-              <View className='flex-row items-center gap-2'>
-                <View className='h-2 w-2 rounded-full bg-[#287a4b]' />
-                <Text className='text-sm text-ink'>Nurse Available</Text>
-              </View>
-              <Text className='text-xs text-muted'>
-                {dateAvailability.filter((a) => a === 'available').length} open days this month
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Days Horizontal Carousel */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName='pb-1'>
-          {daysInMonth.map((x, i) => {
-            const selected = x.toDateString() === selectedDate.toDateString();
-            const past = isPast(x);
-            const availability = dateAvailability?.[i];
-            const isAvailable = availability === 'available';
-            const isFullyBooked = availability === 'fully-booked';
-
-            let containerClass = 'mr-2 w-[66px] items-center rounded-2xl border px-2 py-3';
-            let textClass = 'text-xs font-medium';
-            let dayTextClass = 'my-1 text-xl font-bold';
-
-            if (past) {
-              containerClass = 'mr-2 w-[66px] items-center rounded-2xl border px-2 py-3 bg-[#f1f3f6] border-[#e8edf3] opacity-50';
-              textClass = 'text-xs font-medium text-[#98a4b4]';
-              dayTextClass = 'my-1 text-xl font-bold text-[#98a4b4]';
-            } else if (isFullyBooked) {
-              containerClass = 'mr-2 w-[66px] items-center rounded-2xl border px-2 py-3 bg-[#f1f3f6] border-[#e8edf3]';
-              textClass = 'text-xs font-medium text-[#98a4b4]';
-              dayTextClass = 'my-1 text-xl font-bold text-[#98a4b4]';
-            } else if (selected) {
-              containerClass = 'mr-2 w-[66px] items-center rounded-2xl border px-2 py-3 border-[#173b70] bg-[#173b70]';
-              textClass = 'text-xs font-medium text-blue-100';
-              dayTextClass = 'my-1 text-xl font-bold text-white';
-            } else if (isAvailable) {
-              containerClass = 'mr-2 w-[66px] items-center rounded-2xl border px-2 py-3 bg-[#e7f6ed] border-[#e6f2e8]';
-              textClass = 'text-xs font-medium text-[#287a4b]';
-              dayTextClass = 'my-1 text-xl font-bold text-[#287a4b]';
-            }
-
-            return (
-              <View key={x.toDateString()} className='relative'>
-                <Pressable
-                  accessibilityRole='button'
-                  accessibilityState={{ selected, disabled: past }}
-                  disabled={past}
-                  accessibilityLabel={x.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                  onPress={() => {
-                    if (past) return; // Prevent selecting past dates
-                    setSelectedDate(x);
-                    setTime(null);
-                    setEndTime(null);
-                    setErr('');
-                  }}
-                  className={containerClass}
-                >
-                  <Text className={textClass}>{x.toLocaleDateString('en-US', { weekday: 'short' })}</Text>
-                  <Text className={dayTextClass}>{x.getDate()}</Text>
-                  <Text className={`text-[10px] ${selected ? 'text-blue-100' : 'text-muted'}`}>{x.toLocaleDateString('en-US', { month: 'short' })}</Text>
-                </Pressable>
-                {availability && !selected && !past && (
-                  <DateAvailabilityBadge available={isAvailable} fullyBooked={isFullyBooked} />
-                )}
-              </View>
-            );
-          })}
-        </ScrollView>
-      </View>
+      <MonthCalendar
+        selectedDate={selectedDate}
+        onSelect={(d) => {
+          setSelectedDate(d);
+          setTime(null);
+          setEndTime(null);
+          setErr('');
+        }}
+        minDate={today}
+        getStatus={getTimeStatus}
+        legendCount={null}
+      />
 
       {kind === 'clinic' && (
         <View className={`mb-4 rounded-2xl border p-4 ${closed ? 'border-[#f0d6d6] bg-[#fff5f5]' : 'border-[#d8e6f8] bg-[#edf4ff]'}`}>
@@ -284,11 +145,9 @@ export default function Schedule({ kind, onBack }) {
               ? 'Please choose a weekday to see available appointments.'
               : 'Clinic appointments are available from 8:00 AM to 4:00 PM.'}
           </Text>
-          {!closed && dateAvailability.length > 0 && (
-            <Text className='mt-2 text-xs' style={{ color: isPast(selectedDate) ? '#98a4b4' : '#287a4b' }}>
-              {isPast(selectedDate) ? 'Past date selected' : 'Nurses available for booking'}
-            </Text>
-          )}
+          <Text className='mt-2 text-xs' style={{ color: isSelectedDatePast ? '#98a4b4' : '#287a4b' }}>
+            {isSelectedDatePast ? 'Past date selected' : 'Nurses available for booking'}
+          </Text>
         </View>
       )}
 
@@ -299,7 +158,7 @@ export default function Schedule({ kind, onBack }) {
         </View>
         <View className='flex-row flex-wrap gap-2'>
           {(kind === 'court' ? courtStartOptions.map(formatTime) : SLOTS).map((t) => {
-            const off = closed || isSelectedDatePast || (kind === 'clinic' && taken(t));
+            const off = closed || isSelectedDatePast || (kind === 'court' ? false : isTaken(kind, dateKey, t));
             const selected = t === time;
             return (
               <Pressable

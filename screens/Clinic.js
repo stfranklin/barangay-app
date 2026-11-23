@@ -1,12 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Btn, Page } from '../components/ui';
 import { useAuth } from '../components/auth';
 import { clinicBookingError } from '../components/bookingErrors';
 import { supabase } from '../lib/supabase';
+import MonthCalendar from '../components/MonthCalendar';
 
 const CLINIC_HOURS = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM'];
 const NURSES = ['Nurse Ana', 'Nurse Liza', 'Nurse Mae'];
+const NURSES_COUNT = NURSES.length; // 3 nurses
+const HOURS_PER_NURSE = CLINIC_HOURS.length; // 8 hours
+const TOTAL_SLOTS_PER_DAY = NURSES_COUNT * HOURS_PER_NURSE; // 24 slots
 const SERVICES = [
   { id: 'consultation', name: 'General consultation', description: 'Discuss a health concern with the clinic nurse.' },
   { id: 'screening', name: 'Basic health screening', description: 'Request a routine health check or screening.' },
@@ -53,6 +57,26 @@ const isOverlap = (booking, start, end) => {
   const bookedEnd = booking.end_time?.slice(0, 5);
   if (!bookedStart || !bookedEnd) return booking.time === start;
   return start < bookedEnd && end > bookedStart;
+};
+
+// Check if a date is in the past
+const isPast = (d) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const checkDate = new Date(d);
+  checkDate.setHours(0, 0, 0, 0);
+  return checkDate < today;
+};
+
+// Get the start and end of a month for Supabase queries
+const getMonthBounds = (date) => {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  firstDay.setHours(0, 0, 0, 0);
+  lastDay.setHours(23, 59, 59, 999);
+  return { firstDay, lastDay };
 };
 
 const Status = ({ value }) => {
@@ -102,6 +126,23 @@ function ClinicInformationPage({ onAvailability, onAppointments, onBack }) {
 }
 
 function NurseAvailabilityPage({ dates, selectedDate, setSelectedDate, bookings, userId, loading, error, notice, onChoose, onBack }) {
+  // Create a Set of booked date keys for fast lookup
+  const bookedDates = useMemo(() => {
+    const set = new Set();
+    bookings.forEach((booking) => set.add(toDateKey(new Date(booking.date))));
+    return set;
+  }, [bookings]);
+
+  // Count bookings per date to determine fully-booked status
+  const bookingsByDate = useMemo(() => {
+    const counts = {};
+    bookings.forEach((booking) => {
+      const key = toDateKey(new Date(booking.date));
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  }, [bookings]);
+
   const availability = useMemo(() => NURSES.map((nurse) => ({
     nurse,
     slots: CLINIC_HOURS.map((time) => ({
@@ -113,20 +154,58 @@ function NurseAvailabilityPage({ dates, selectedDate, setSelectedDate, bookings,
     })),
   })), [bookings, userId]);
 
+  // Determine the count of available days for the legend
+  const availableDayCount = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let count = 0;
+    for (const dateKey of bookedDates) {
+      const day = dateFromKey(dateKey);
+      if (!isPast(day) && day.getDay() !== 0 && day.getDay() !== 6 && bookingsByDate[dateKey] < TOTAL_SLOTS_PER_DAY) {
+        count++;
+      }
+    }
+    return count;
+  }, [bookedDates, bookingsByDate]);
+
+  // Get clinic status for a given date
+  const getStatus = useCallback((date) => {
+    const dateKey = toDateKey(date);
+
+    // Check if past date - should not be selectable but we still show availability
+    if (isPast(date)) {
+      return null;
+    }
+
+    // Check if weekend (closed)
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return 'closed';
+    }
+
+    // Check if fully booked
+    const bookedCount = bookingsByDate[dateKey] || 0;
+    if (bookedCount >= TOTAL_SLOTS_PER_DAY) {
+      return 'fully-booked';
+    }
+
+    // Otherwise available
+    return 'available';
+  }, [bookingsByDate]);
+
   return (
     <Page title='Nurse availability' onBack={onBack}>
       <Text className='mb-3 text-muted'>Select a date to see available appointment times.</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className='mb-4'>
-        {dates.map((date) => {
-          const day = dateFromKey(date);
-          return (
-            <Pressable key={date} onPress={() => setSelectedDate(date)} className={`mr-2 items-center rounded-xl px-4 py-3 ${date === selectedDate ? 'bg-[#173b70]' : 'border border-line bg-card'}`}>
-              <Text className={`text-xs ${date === selectedDate ? 'text-blue-100' : 'text-muted'}`}>{day.toLocaleDateString('en-PH', { weekday: 'short' })}</Text>
-              <Text className={`text-lg font-bold ${date === selectedDate ? 'text-white' : 'text-ink'}`}>{day.getDate()}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+
+      {/* Month Calendar with availability markers */}
+      <MonthCalendar
+        selectedDate={selectedDate ? dateFromKey(selectedDate) : null}
+        onSelect={(d) => setSelectedDate(toDateKey(d))}
+        minDate={new Date()}
+        getStatus={getStatus}
+        legendCount={availableDayCount}
+      />
+
       <Text className='mb-4 text-sm font-semibold text-ink'>{formatDate(selectedDate)}</Text>
       {loading ? <Text className='mb-4 text-muted'>Checking availability...</Text> : null}
       {error ? <Text className='mb-4 text-crimson'>{error}</Text> : null}
@@ -236,10 +315,9 @@ export function AppointmentDetailsPage({ appointment, onBack }) {
 
 export default function ClinicFlow({ onBack, onAppointmentsUpdated }) {
   const { session, profile } = useAuth();
-  const dates = useMemo(() => clinicDates(), []);
   const [page, setPage] = useState('services');
   const [service, setService] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(dates[0]);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [selectedNurse, setSelectedNurse] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [availability, setAvailability] = useState([]);
@@ -250,12 +328,56 @@ export default function ClinicFlow({ onBack, onAppointmentsUpdated }) {
   const [error, setError] = useState('');
   const [availabilityNotice, setAvailabilityNotice] = useState('');
   const [booking, setBooking] = useState(null);
+  const [monthlyBookings, setMonthlyBookings] = useState([]);
 
+  // Initialize selectedDate from the first future weekday
   useEffect(() => {
-    if (page !== 'availability') return undefined;
+    if (!selectedDate) {
+      const initialDates = clinicDates();
+      setSelectedDate(initialDates[0] || toDateKey(new Date()));
+    }
+  }, []);
+
+  // Load clinic bookings for the current month when selectedDate changes
+  useEffect(() => {
+    if (!selectedDate) return undefined;
+
     let active = true;
     setLoading(true);
     setError('');
+
+    const day = dateFromKey(selectedDate);
+    const { firstDay, lastDay } = getMonthBounds(day);
+
+    supabase.from('bookings')
+      .select('id,user_id,date,time,nurse,service,start_time,end_time,status')
+      .eq('kind', 'clinic')
+      .gte('date', firstDay.toISOString().split('T')[0])
+      .lte('date', lastDay.toISOString().split('T')[0])
+      .then(({ data, error: queryError }) => {
+        if (!active) return;
+        setMonthlyBookings(data || []);
+        setError(queryError ? clinicBookingError(queryError, 'Could not load nurse availability. Check your connection and try again.') : '');
+        setLoading(false);
+      })
+      .catch((queryError) => {
+        if (!active) return;
+        setMonthlyBookings([]);
+        setError(queryError?.message || 'Could not load nurse availability.');
+        setLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [selectedDate]);
+
+  // Load individual day availability for detailed time slots
+  useEffect(() => {
+    if (page !== 'availability' || !selectedDate) return undefined;
+
+    let active = true;
+    setLoading(true);
+    setError('');
+
     supabase.from('bookings')
       .select('id,user_id,date,time,nurse,service,start_time,end_time,status')
       .eq('kind', 'clinic')
@@ -272,9 +394,11 @@ export default function ClinicFlow({ onBack, onAppointmentsUpdated }) {
         setError(queryError?.message || 'Could not load nurse availability.');
         setLoading(false);
       });
+
     return () => { active = false; };
   }, [page, selectedDate]);
 
+  // Load user's appointments
   useEffect(() => {
     if (page !== 'appointments' || !session?.user?.id) return undefined;
     let active = true;
@@ -352,7 +476,20 @@ export default function ClinicFlow({ onBack, onAppointmentsUpdated }) {
   };
 
   if (page === 'information') return <ClinicInformationPage onBack={() => setPage('services')} onAvailability={() => setPage('availability')} onAppointments={() => setPage('appointments')} />;
-  if (page === 'availability') return <NurseAvailabilityPage dates={dates} selectedDate={selectedDate} setSelectedDate={(date) => { setSelectedDate(date); setSelectedNurse(null); setSelectedTime(null); setAvailabilityNotice(''); }} bookings={availability} userId={session?.user?.id} loading={loading} error={error} notice={availabilityNotice} onChoose={chooseSlot} onBack={() => setPage('information')} />;
+  if (page === 'availability') return (
+    <NurseAvailabilityPage
+      dates={clinicDates()}
+      selectedDate={selectedDate}
+      setSelectedDate={setSelectedDate}
+      bookings={monthlyBookings}
+      userId={session?.user?.id}
+      loading={loading}
+      error={error}
+      notice={availabilityNotice}
+      onChoose={chooseSlot}
+      onBack={() => setPage('information')}
+    />
+  );
   if (page === 'booking') return <AppointmentBookingForm service={service} date={selectedDate} nurse={selectedNurse} time={selectedTime} profile={profile} onConfirm={confirmBooking} busy={busy} error={error} onBack={() => setPage('availability')} />;
   if (page === 'confirmation') return <AppointmentConfirmationPage booking={booking} onAppointments={() => setPage('appointments')} onHome={() => setPage('services')} />;
   if (page === 'appointments') return <ClinicMyAppointmentsPage appointments={appointments} loading={loading} error={error} onSelect={(item) => { setSelectedAppointment(item); setPage('details'); }} onBack={() => setPage('services')} />;
