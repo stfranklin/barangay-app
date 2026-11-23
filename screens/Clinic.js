@@ -1,12 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Btn, Page } from '../components/ui';
 import { useAuth } from '../components/auth';
 import { clinicBookingError } from '../components/bookingErrors';
 import { supabase } from '../lib/supabase';
+import MonthCalendar from '../components/MonthCalendar';
 
 const CLINIC_HOURS = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM'];
 const NURSES = ['Nurse Ana', 'Nurse Liza', 'Nurse Mae'];
+const NURSES_COUNT = NURSES.length; // 3 nurses
+const HOURS_PER_NURSE = CLINIC_HOURS.length; // 8 hours
+const TOTAL_SLOTS_PER_DAY = NURSES_COUNT * HOURS_PER_NURSE; // 24 slots
 const SERVICES = [
   { id: 'consultation', name: 'General consultation', description: 'Discuss a health concern with the clinic nurse.' },
   { id: 'screening', name: 'Basic health screening', description: 'Request a routine health check or screening.' },
@@ -55,6 +59,38 @@ const isOverlap = (booking, start, end) => {
   return start < bookedEnd && end > bookedStart;
 };
 
+// Blocking statuses are those that prevent slot availability (per database constraints)
+const BLOCKING_STATUSES = new Set(['Confirmed', 'Declined', 'Completed']);
+const isStatusBlocking = (status) => BLOCKING_STATUSES.has(status);
+
+// Format date as YYYY-MM-DD string (not using toISOString for date comparisons)
+const dateKeyToString = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Check if a date is in the past
+const isPast = (d) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const checkDate = new Date(d);
+  checkDate.setHours(0, 0, 0, 0);
+  return checkDate < today;
+};
+
+// Get the start and end of a month for Supabase queries
+const getMonthBounds = (date) => {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  firstDay.setHours(0, 0, 0, 0);
+  lastDay.setHours(23, 59, 59, 999);
+  return { firstDay, lastDay };
+};
+
 const Status = ({ value }) => {
   const color = value === 'Confirmed' || value === 'Completed' ? 'text-green-500' : value === 'Declined' ? 'text-crimson' : 'text-royal';
   return <Text className={`font-semibold ${color}`}>{value || 'Pending'}</Text>;
@@ -101,32 +137,113 @@ function ClinicInformationPage({ onAvailability, onAppointments, onBack }) {
   );
 }
 
-function NurseAvailabilityPage({ dates, selectedDate, setSelectedDate, bookings, userId, loading, error, notice, onChoose, onBack }) {
+function NurseAvailabilityPage({ dates, selectedDate, setSelectedDate, bookings, userId, loading, error, notice, onChoose, onBack, visibleMonth }) {
+  // Filter bookings to only those for the selected date (fixes bug 1)
+  const selectedDateObj = useMemo(() => selectedDate ? dateFromKey(selectedDate) : null, [selectedDate]);
+  const bookingsForSelectedDate = useMemo(() => {
+    if (!selectedDateObj) return [];
+    const dateKey = toDateKey(selectedDateObj);
+    return bookings.filter((booking) => {
+      const bookingDate = new Date(booking.date);
+      return dateKeyToString(bookingDate) === dateKey;
+    });
+  }, [bookings, selectedDateObj]);
+
+  // Check if a specific slot is blocked for a nurse
+  const isSlotBlocked = useCallback((nurse, time) => {
+    const startTime = toSqlTime(time).slice(0, 5);
+    const endTime = nextHour(time).slice(0, 5);
+    return bookingsForSelectedDate.some((booking) => {
+      // Slot is blocked if:
+      // 1. Booking is for this nurse AND the time overlaps
+      // 2. Booking is for this user (their own booking blocks them)
+      // 3. AND the status blocks the slot
+      const isForThisNurse = booking.nurse === nurse;
+      const isOwnBooking = booking.user_id === userId;
+      const blocksSlot = isStatusBlocking(booking.status);
+      return (isForThisNurse || isOwnBooking) && blocksSlot && isOverlap(booking, startTime, endTime);
+    });
+  }, [bookingsForSelectedDate, userId]);
+
+  // Check if the date is fully booked (all nurses have all hours blocked)
+  const isFullyBookedDate = useCallback((date) => {
+    return NURSES.every((nurse) =>
+      CLINIC_HOURS.every((time) => isSlotBlocked(nurse, time))
+    );
+  }, [isSlotBlocked]);
+
   const availability = useMemo(() => NURSES.map((nurse) => ({
     nurse,
     slots: CLINIC_HOURS.map((time) => ({
       time,
-      booked: bookings.some((booking) =>
-        (booking.nurse === nurse || booking.user_id === userId)
-        && isOverlap(booking, toSqlTime(time).slice(0, 5), nextHour(time).slice(0, 5))
-      ),
+      booked: isSlotBlocked(nurse, time),
     })),
-  })), [bookings, userId]);
+  })), [isSlotBlocked]);
+
+  // Get clinic status for a given date
+  const getStatus = useCallback((date) => {
+    // Check if past date - should not be selectable but we still show availability
+    if (isPast(date)) {
+      return null;
+    }
+
+    // Check if weekend (closed)
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return 'closed';
+    }
+
+    // Check if fully booked
+    if (isFullyBookedDate(date)) {
+      return 'fully-booked';
+    }
+
+    // Otherwise available
+    return 'available';
+  }, [isFullyBookedDate]);
+
+  // Compute available day count from ALL days in the visible month (fixes bug 3)
+  const availableDayCount = useMemo(() => {
+    if (!visibleMonth) return 0;
+
+    const year = visibleMonth.getFullYear();
+    const month = visibleMonth.getMonth();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    let count = 0;
+    for (let day = 1; day <= totalDays; day++) {
+      const date = new Date(year, month, day);
+
+      // Skip past dates
+      if (isPast(date)) continue;
+
+      // Skip weekends (closed)
+      if (date.getDay() === 0 || date.getDay() === 6) continue;
+
+      // Skip if fully booked
+      if (isFullyBookedDate(date)) continue;
+
+      count++;
+    }
+    return count;
+  }, [visibleMonth, isFullyBookedDate]);
 
   return (
     <Page title='Nurse availability' onBack={onBack}>
       <Text className='mb-3 text-muted'>Select a date to see available appointment times.</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className='mb-4'>
-        {dates.map((date) => {
-          const day = dateFromKey(date);
-          return (
-            <Pressable key={date} onPress={() => setSelectedDate(date)} className={`mr-2 items-center rounded-xl px-4 py-3 ${date === selectedDate ? 'bg-[#173b70]' : 'border border-line bg-card'}`}>
-              <Text className={`text-xs ${date === selectedDate ? 'text-blue-100' : 'text-muted'}`}>{day.toLocaleDateString('en-PH', { weekday: 'short' })}</Text>
-              <Text className={`text-lg font-bold ${date === selectedDate ? 'text-white' : 'text-ink'}`}>{day.getDate()}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+
+      {/* Month Calendar with availability markers */}
+      <MonthCalendar
+        selectedDate={selectedDate ? dateFromKey(selectedDate) : null}
+        onSelect={(d) => setSelectedDate(toDateKey(d))}
+        minDate={new Date()}
+        getStatus={getStatus}
+        legendCount={availableDayCount}
+        onMonthChange={(firstDayOfMonth) => {
+          // Month changed - parent should load new bookings
+        }}
+      />
+
       <Text className='mb-4 text-sm font-semibold text-ink'>{formatDate(selectedDate)}</Text>
       {loading ? <Text className='mb-4 text-muted'>Checking availability...</Text> : null}
       {error ? <Text className='mb-4 text-crimson'>{error}</Text> : null}
@@ -140,7 +257,7 @@ function NurseAvailabilityPage({ dates, selectedDate, setSelectedDate, bookings,
                 key={time}
                 disabled={loading || booked || Boolean(error)}
                 onPress={() => onChoose(nurse, time)}
-                className={`rounded-xl border px-3 py-2.5 ${booked || loading || error ? 'border-[#e8edf3] bg-[#f1f3f6]' : 'border-[#173b70] bg-[#173b70]'}`}
+                className={`rounded-xl border px-3 py-2.5 ${booked || loading || error ? 'border-line bg-unavailableLight' : 'border-royal bg-royal'}`}
               >
                 <Text className={`text-sm font-medium ${booked || loading || error ? 'text-muted' : 'text-white'}`}>{time}{booked ? ' · Booked' : ''}</Text>
               </Pressable>
@@ -236,10 +353,9 @@ export function AppointmentDetailsPage({ appointment, onBack }) {
 
 export default function ClinicFlow({ onBack, onAppointmentsUpdated }) {
   const { session, profile } = useAuth();
-  const dates = useMemo(() => clinicDates(), []);
   const [page, setPage] = useState('services');
   const [service, setService] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(dates[0]);
+  const [selectedDate, setSelectedDate] = useState(null);
   const [selectedNurse, setSelectedNurse] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [availability, setAvailability] = useState([]);
@@ -250,12 +366,69 @@ export default function ClinicFlow({ onBack, onAppointmentsUpdated }) {
   const [error, setError] = useState('');
   const [availabilityNotice, setAvailabilityNotice] = useState('');
   const [booking, setBooking] = useState(null);
+  const [monthlyBookings, setMonthlyBookings] = useState([]);
 
+  // Track the currently visible month for data loading (bug 2 fix)
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+
+  // Initialize selectedDate from the first future weekday
   useEffect(() => {
-    if (page !== 'availability') return undefined;
+    if (!selectedDate) {
+      const initialDates = clinicDates();
+      setSelectedDate(initialDates[0] || toDateKey(new Date()));
+    }
+  }, []);
+
+  // Load clinic bookings for the visible month (bug 2 fix: depends on visibleMonth, not selectedDate)
+  useEffect(() => {
+    if (!visibleMonth) return undefined;
+
     let active = true;
     setLoading(true);
     setError('');
+
+    // Get month bounds from visibleMonth
+    const year = visibleMonth.getFullYear();
+    const month = visibleMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Build date strings as YYYY-MM-DD (bug 2 fix: don't use toISOString)
+    const firstDayStr = dateKeyToString(firstDay);
+    const lastDayStr = dateKeyToString(lastDay);
+
+    supabase.from('bookings')
+      .select('id,user_id,date,time,nurse,service,start_time,end_time,status')
+      .eq('kind', 'clinic')
+      .gte('date', firstDayStr)
+      .lte('date', lastDayStr)
+      .then(({ data, error: queryError }) => {
+        if (!active) return; // Ignore stale responses (bug 2)
+        setMonthlyBookings(data || []);
+        setError(queryError ? clinicBookingError(queryError, 'Could not load nurse availability. Check your connection and try again.') : '');
+        setLoading(false);
+      })
+      .catch((queryError) => {
+        if (!active) return;
+        setMonthlyBookings([]);
+        setError(queryError?.message || 'Could not load nurse availability.');
+        setLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [visibleMonth]);
+
+  // Load individual day availability for detailed time slots
+  useEffect(() => {
+    if (page !== 'availability' || !selectedDate) return undefined;
+
+    let active = true;
+    setLoading(true);
+    setError('');
+
     supabase.from('bookings')
       .select('id,user_id,date,time,nurse,service,start_time,end_time,status')
       .eq('kind', 'clinic')
@@ -272,9 +445,11 @@ export default function ClinicFlow({ onBack, onAppointmentsUpdated }) {
         setError(queryError?.message || 'Could not load nurse availability.');
         setLoading(false);
       });
+
     return () => { active = false; };
   }, [page, selectedDate]);
 
+  // Load user's appointments
   useEffect(() => {
     if (page !== 'appointments' || !session?.user?.id) return undefined;
     let active = true;
@@ -352,7 +527,22 @@ export default function ClinicFlow({ onBack, onAppointmentsUpdated }) {
   };
 
   if (page === 'information') return <ClinicInformationPage onBack={() => setPage('services')} onAvailability={() => setPage('availability')} onAppointments={() => setPage('appointments')} />;
-  if (page === 'availability') return <NurseAvailabilityPage dates={dates} selectedDate={selectedDate} setSelectedDate={(date) => { setSelectedDate(date); setSelectedNurse(null); setSelectedTime(null); setAvailabilityNotice(''); }} bookings={availability} userId={session?.user?.id} loading={loading} error={error} notice={availabilityNotice} onChoose={chooseSlot} onBack={() => setPage('information')} />;
+  if (page === 'availability') return (
+    <NurseAvailabilityPage
+      dates={clinicDates()}
+      selectedDate={selectedDate}
+      setSelectedDate={setSelectedDate}
+      bookings={monthlyBookings}
+      userId={session?.user?.id}
+      loading={loading}
+      error={error}
+      notice={availabilityNotice}
+      onChoose={chooseSlot}
+      onBack={() => setPage('information')}
+      visibleMonth={visibleMonth}
+      onMonthChange={(firstDayOfMonth) => setVisibleMonth(firstDayOfMonth)}
+    />
+  );
   if (page === 'booking') return <AppointmentBookingForm service={service} date={selectedDate} nurse={selectedNurse} time={selectedTime} profile={profile} onConfirm={confirmBooking} busy={busy} error={error} onBack={() => setPage('availability')} />;
   if (page === 'confirmation') return <AppointmentConfirmationPage booking={booking} onAppointments={() => setPage('appointments')} onHome={() => setPage('services')} />;
   if (page === 'appointments') return <ClinicMyAppointmentsPage appointments={appointments} loading={loading} error={error} onSelect={(item) => { setSelectedAppointment(item); setPage('details'); }} onBack={() => setPage('services')} />;
